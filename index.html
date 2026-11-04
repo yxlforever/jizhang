@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#f7f7f5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>我的小账本</title>
+  <link rel="stylesheet" href="accounting.css" />
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #161616;
+      --muted: #8b8b86;
+      --line: #e2e2dd;
+      --paper: #f7f7f5;
+      --paper-light: #f8f9fa;
+      --white: #fff;
+      --expense: #F44336;
+      --panel: rgba(255, 255, 255, .97);
+      --shadow: 0 18px 48px rgba(21, 21, 19, .15);
+      --app-font-size: 16px;
+    }
+    *, *::before, *::after { box-sizing: inherit; }
+    html {
+      min-height: 100%;
+      box-sizing: border-box;
+      background: var(--paper);
+      font-size: var(--app-font-size);
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea, select { font: inherit; }
+    /* 独立版：记账页默认常显 */
+    .accounting-page,
+    .accounting-page.active {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+    }
+    .accounting-back-btn { visibility: hidden; pointer-events: none; }
+    .settings-switch-row { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 14px; cursor: pointer; }
+    .settings-switch-input { position: absolute; opacity: 0; pointer-events: none; }
+    .settings-switch { position: relative; flex: 0 0 46px; width: 46px; height: 26px; border-radius: 999px; background: #d8d8d3; transition: background .2s; }
+    .settings-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 2px 7px rgba(0, 0, 0, .16); transition: transform .2s; }
+    .settings-switch-input:checked + .settings-switch { background: var(--ink); }
+    .settings-switch-input:checked + .settings-switch::after { transform: translateX(20px); }
+  </style>
+</head>
+<body class="show-accounting">
+  <main class="accounting-page active" id="accountingPage" data-app="accounting" aria-label="记账页面">
+    <header class="accounting-header">
+      <button class="accounting-back-btn" id="accountingBackBtn" aria-label="返回桌面">
+        <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="header-left">
+        <h1 class="accounting-app-title" id="accountingTitle">我的小账本</h1>
+        <p class="current-date" id="accountingDate">2026年10月16日</p>
+      </div>
+      <button class="accounting-settings-btn" id="accountingSettingsBtn" aria-label="设置">
+        <svg viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.2 13.4 1.1.9-1.7 3-1.4-.5a7.7 7.7 0 0 1-1.8 1l-.2 1.5h-3.4l-.2-1.5a7.7 7.7 0 0 1-1.8-1l-1.4.5-1.7-3 1.1-.9a7.5 7.5 0 0 1 0-2.8l-1.1-.9 1.7-3 1.4.5a7.7 7.7 0 0 1 1.8-1l.2-1.5h3.4l.2 1.5a7.7 7.7 0 0 1 1.8 1l1.4-.5 1.7 3-1.1.9a7.5 7.5 0 0 1 0 2.8Z"/></svg>
+      </button>
+    </header>
+
+    <div class="accounting-view active" id="accountingHomeView">
+      <!-- 总余额卡片 -->
+      <section class="accounting-card balance-card">
+        <p class="card-label">当前总余额</p>
+        <h2 class="balance-amount" id="totalBalance">¥0.00</h2>
+        <div class="balance-stats-slider">
+          <div class="balance-stats-wrapper" id="balanceStatsWrapper">
+            <!-- 今日 -->
+            <div class="balance-stats slide">
+              <div class="stat-item income">
+                <span class="stat-label">今日收入</span>
+                <span class="stat-value" id="todayIncome">¥0.00</span>
+              </div>
+              <div class="stat-item expense">
+                <span class="stat-label">今日支出</span>
+                <span class="stat-value" id="todayExpense">¥0.00</span>
+              </div>
+            </div>
+            <!-- 本月 -->
+            <div class="balance-stats slide">
+              <div class="stat-item income">
+                <span class="stat-label">本月收入</span>
+                <span class="stat-value" id="monthIncome">¥0.00</span>
+              </div>
+              <div class="stat-item expense">
+                <span class="stat-label">本月支出</span>
+                <span class="stat-value" id="monthExpense">¥0.00</span>
+              </div>
+            </div>
+          </div>
+          <div class="slider-indicators" id="balanceSliderIndicators">
+            <span class="indicator active"></span>
+            <span class="indicator"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 每日预算卡片 -->
+      <section class="accounting-card budget-card clickable-card" id="budgetCard">
+        <div class="budget-main-row">
+          <div class="budget-info-block">
+            <p class="budget-remaining-label">剩余预算</p>
+            <h2 class="budget-remaining-value" id="budgetRemaining">¥0.00</h2>
+          </div>
+          <div class="budget-stats-block">
+            <span>已花 <span id="budgetSpent">¥0.00</span> / 预算 <span id="budgetTotal">¥0.00</span></span>
+            <span id="budgetPercent">0%</span>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="budgetProgress" style="width: 0%"></div>
+        </div>
+      </section>
+
+      <!-- 账单列表容器 -->
+      <div id="billsListContainer">
+        <!-- 账单卡片将由 JS 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 账单视图 -->
+    <div class="accounting-view" id="accountingBillsView">
+      <div class="bills-filter-section">
+        <div class="bills-type-tabs">
+          <button class="bill-filter-tab active" data-view="monthly">月度</button>
+          <button class="bill-filter-tab" data-view="yearly">年度</button>
+        </div>
+        <div class="bills-date-picker">
+          <button id="prevDateBtn" class="date-nav-btn">‹</button>
+          <span id="currentDateDisplay" class="current-date-display">2026年10月</span>
+          <button id="nextDateBtn" class="date-nav-btn">›</button>
+        </div>
+      </div>
+      
+      <section class="accounting-card summary-card">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">支出</span>
+            <span class="summary-value expense" id="billsExpenseTotal">¥0.00</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">收入</span>
+            <span class="summary-value income" id="billsIncomeTotal">¥0.00</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">结余</span>
+            <span class="summary-value" id="billsBalanceTotal">¥0.00</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 图形分布区域 -->
+      <section class="accounting-card chart-card">
+        <div class="chart-tabs">
+          <button class="chart-tab active" data-type="expense">支出</button>
+          <button class="chart-tab" data-type="income">收入</button>
+        </div>
+        <div class="chart-container" id="billsChartContainer">
+          <!-- 动态生成的环形图和图例 -->
+        </div>
+      </section>
+
+      <div id="billsDetailContainer">
+        <!-- 账单详情将由 JS 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 财务视图 -->
+    <div class="accounting-view" id="accountingFinancialView">
+      <!-- 小狗钱钱存钱概览 -->
+      <section class="accounting-card savings-card" id="savingsOverview">
+        <div class="card-header">
+          <h3 class="card-title">小狗钱钱</h3>
+        </div>
+        <div id="savingsContent">
+          <div class="empty-savings" id="emptySavings">
+            <p>还没有存钱目标</p>
+          </div>
+          <div class="savings-list" id="savingsList"></div>
+        </div>
+      </section>
+
+      <!-- 债务概览 -->
+      <section class="accounting-card debt-card" id="debtOverview">
+        <div class="card-header">
+          <h3 class="card-title">还钱计划</h3>
+        </div>
+        <div id="debtContent">
+          <div class="empty-debt" id="emptyDebt">
+            <p>目前没有债务</p>
+          </div>
+          <div class="debt-list" id="debtList"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 我的视图 -->
+    <div class="accounting-view" id="accountingMineView">
+      <div class="mine-stats-container">
+        <div class="mine-stat-card">
+          <div class="stat-value" id="totalAccountingDays">0</div>
+          <div class="stat-label">总记账天数</div>
+        </div>
+        <div class="mine-stat-card">
+          <div class="stat-value" id="totalAccountingTimes">0</div>
+          <div class="stat-label">总记账次数</div>
+        </div>
+      </div>
+      <div class="mine-list-container">
+        <div class="mine-list-item" id="mineAssetsBtn">
+          <span class="mine-list-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <span class="mine-list-text">资产</span>
+          <span class="mine-list-arrow">›</span>
+        </div>
+        <div class="mine-list-item" id="mineCategoryBtn">
+          <span class="mine-list-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </span>
+          <span class="mine-list-text">分类</span>
+          <span class="mine-list-arrow">›</span>
+        </div>
+        <div class="mine-list-item" id="minePlanBtn">
+          <span class="mine-list-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </span>
+          <span class="mine-list-text">计划</span>
+          <span class="mine-list-arrow">›</span>
+        </div>
+        <div class="mine-list-item" id="mineImportExportBtn">
+          <span class="mine-list-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </span>
+          <span class="mine-list-text">导入导出</span>
+          <span class="mine-list-arrow">›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <nav class="accounting-nav">
+      <button class="nav-item active" id="navHome">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"/></svg>
+        <span>首页</span>
+      </button>
+      <button class="nav-item" id="navBills">
+        <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg>
+        <span>账单</span>
+      </button>
+      <button class="nav-add" id="navAddBill" aria-label="记一笔">
+        <div class="add-icon">＋</div>
+      </button>
+      <button class="nav-item" id="navFinancial">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>财务</span>
+      </button>
+      <button class="nav-item" id="navMine">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>我的</span>
+      </button>
+    </nav>
+
+    <!-- 计划设置模态框 -->
+    <div class="accounting-sheet-modal" id="planSettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <form class="accounting-sheet" id="planSettingsForm">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">添加计划</h2>
+          <button class="accounting-sheet-close" id="planSettingsCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="add-bill-tabs">
+            <button type="button" class="bill-type-tab active" data-type="savings">小狗钱钱</button>
+            <button type="button" class="bill-type-tab" data-type="debt">还钱计划</button>
+          </div>
+          <div class="add-bill-main">
+            <div class="bill-field">
+              <label id="planNameLabel">目标名字</label>
+              <input type="text" id="planNameInput" placeholder="请输入名称" required>
+            </div>
+            <div class="bill-field">
+              <label id="planAmountLabel">目标金额 (¥)</label>
+              <input type="number" id="planAmountInput" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="bill-field">
+              <label>开始时间</label>
+              <input type="date" id="planStartDateInput" required>
+            </div>
+            <div class="bill-field">
+              <label>结束时间 (可选)</label>
+              <input type="date" id="planEndDateInput">
+            </div>
+            <div class="bill-field">
+              <label>进度条颜色</label>
+              <input type="color" id="planColorInput" value="#4CAF50" style="width: 100%; height: 40px; padding: 0; border: none; border-radius: 8px; cursor: pointer;">
+            </div>
+          </div>
+          <div class="accounting-sheet-actions">
+            <button type="submit" class="accounting-btn-primary">保存</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 记一笔半屏模态框 -->
+    <div class="accounting-sheet-modal" id="addBillModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <form class="accounting-sheet" id="addBillForm">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">记一笔</h2>
+          <button class="accounting-sheet-close" id="addBillCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="add-bill-tabs">
+            <button type="button" class="bill-type-tab active" data-type="expense">支出</button>
+            <button type="button" class="bill-type-tab" data-type="income">收入</button>
+          </div>
+          <div class="add-bill-main">
+            <div class="amount-input-wrap">
+              <span class="currency">¥</span>
+              <input type="number" id="billAmount" step="0.01" placeholder="0.00" required autofocus>
+            </div>
+            <div class="bill-field">
+              <label>分类</label>
+              <select id="billCategory" required>
+                <!-- 分类由 JS 动态加载 -->
+              </select>
+            </div>
+            <div class="bill-field">
+              <label>时间</label>
+              <input type="datetime-local" id="billTime" required>
+            </div>
+            <label class="settings-switch-row" id="billIncludeBudgetRow" style="margin-bottom: 20px;">
+              <span><strong style="color: var(--ink); font-size: 14px; padding-left: 4px;">计入今日预算</strong></span>
+              <input class="settings-switch-input" id="billIncludeBudget" type="checkbox" checked />
+              <span class="settings-switch" aria-hidden="true"></span>
+            </label>
+            <div class="bill-field">
+              <label>备注</label>
+              <input type="text" id="billNote" placeholder="可选备注">
+            </div>
+          </div>
+          <div class="accounting-sheet-actions">
+            <button class="accounting-btn-primary" type="submit">保存</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 预算设置半屏模态框 -->
+    <div class="accounting-sheet-modal" id="budgetSettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <form class="accounting-sheet" id="budgetSettingsForm">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">预算设置</h2>
+          <button class="accounting-sheet-close" id="budgetSettingsCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="add-bill-main">
+            <div class="bill-field">
+              <label>每日预算金额 (¥)</label>
+              <input type="number" id="budgetAmountInput" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="bill-field">
+              <label>新的一天开始时间</label>
+              <select id="budgetResetTimeInput">
+                <option value="0">00:00 (午夜)</option>
+                <option value="1">01:00</option>
+                <option value="2">02:00</option>
+                <option value="3">03:00</option>
+                <option value="4">04:00</option>
+                <option value="5">05:00</option>
+                <option value="6">06:00</option>
+                <option value="7">07:00 (默认)</option>
+                <option value="8">08:00</option>
+                <option value="9">09:00</option>
+              </select>
+              <p style="margin: 4px 0 0 4px; font-size: 12px; color: var(--muted);">例如设置 07:00，则每天凌晨到早上 7 点前的花费会算在昨天的预算里。</p>
+            </div>
+          </div>
+          <div class="accounting-sheet-actions">
+            <button class="accounting-btn-primary" type="submit">保存设置</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 资产设置半屏模态框 -->
+    <div class="accounting-sheet-modal" id="assetsSettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <form class="accounting-sheet" id="assetsSettingsForm">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">设置总资产</h2>
+          <button class="accounting-sheet-close" id="assetsSettingsCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="add-bill-main">
+            <div class="bill-field">
+              <label>当前初始总资产 (¥)</label>
+              <input type="number" id="initialAssetsInput" step="0.01" placeholder="0.00" required autofocus>
+              <p style="margin: 4px 0 0 4px; font-size: 12px; color: var(--muted);">这是你的基础资产，日常记账的收支将在此基础上进行计算。</p>
+            </div>
+          </div>
+          <div class="accounting-sheet-actions">
+            <button class="accounting-btn-primary" type="submit">保存设置</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 导入导出 Modal -->
+    <div class="accounting-sheet-modal" id="importExportModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="accounting-sheet">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">导入导出</h2>
+          <button class="accounting-sheet-close" id="importExportCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="add-bill-main">
+            <p style="margin: 0 0 16px 4px; font-size: 13px; color: var(--muted); line-height: 1.5;">导出当前记账数据为 JSON 文件，或从备份文件恢复。导入将覆盖现有记账数据。</p>
+            <div class="accounting-sheet-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 0;">
+              <button type="button" class="accounting-btn-primary" id="exportAccountingBtn">导出数据</button>
+              <button type="button" class="accounting-btn-secondary" id="importAccountingBtn">导入数据</button>
+            </div>
+            <input id="importAccountingInput" type="file" accept=".json,application/json" hidden />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分类管理 Modal -->
+    <div class="accounting-sheet-modal" id="categorySettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="accounting-sheet" style="max-height: 80vh; display: flex; flex-direction: column;">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">分类管理</h2>
+          <button class="accounting-sheet-close" id="categorySettingsCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content" style="flex: 1; overflow-y: auto;">
+          <div class="bill-type-tabs" style="margin-bottom: 16px;">
+            <button class="bill-type-tab active" data-type="expense" id="categoryExpenseTab">支出</button>
+            <button class="bill-type-tab" data-type="income" id="categoryIncomeTab">收入</button>
+          </div>
+          <div id="categoryListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Categories will be rendered here -->
+          </div>
+          <form id="addCategoryForm" style="margin-top: 16px; display: flex; gap: 8px;">
+            <input type="text" id="newCategoryName" placeholder="新分类名称" required style="flex: 1; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: transparent; color: var(--text);">
+            <button type="submit" class="accounting-btn-primary" style="width: auto; padding: 0 16px; min-height: 38px;">添加</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="accounting.js"></script>
+  <script>
+    if (typeof window.openAccountingPage === "function") {
+      window.openAccountingPage();
+    }
+  </script>
+</body>
+</html>
