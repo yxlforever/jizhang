@@ -71,7 +71,7 @@
       </button>
       <div class="header-left">
         <h1 class="accounting-app-title" id="accountingTitle">我的小账本</h1>
-        <p class="current-date" id="accountingDate">2026年10月16日</p>
+        <button type="button" class="current-date" id="accountingDate" aria-label="选择月份">2026年10月</button>
       </div>
       <button class="accounting-settings-btn" id="accountingSettingsBtn" aria-label="设置">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -102,11 +102,11 @@
             <!-- 本月 -->
             <div class="balance-stats slide">
               <div class="stat-item income">
-                <span class="stat-label">本月收入</span>
+                <span class="stat-label" id="monthIncomeLabel">本月收入</span>
                 <span class="stat-value" id="monthIncome">¥0.00</span>
               </div>
               <div class="stat-item expense">
-                <span class="stat-label">本月支出</span>
+                <span class="stat-label" id="monthExpenseLabel">本月支出</span>
                 <span class="stat-value" id="monthExpense">¥0.00</span>
               </div>
             </div>
@@ -118,22 +118,39 @@
         </div>
       </section>
 
-      <!-- 预算卡片 -->
+      <!-- 预算卡片：混合模式下顺序为今日 → 分类 → 本月 -->
       <section class="accounting-card budget-card clickable-card" id="budgetCard">
-        <div class="budget-main-row">
-          <div class="budget-info-block">
-            <p class="budget-remaining-label" id="budgetRemainingLabel">剩余预算</p>
-            <h2 class="budget-remaining-value" id="budgetRemaining">¥0.00</h2>
+        <div class="budget-block budget-daily-block" id="budgetDailyBlock" hidden>
+          <div class="budget-main-row">
+            <div class="budget-info-block">
+              <p class="budget-remaining-label" id="budgetDailyLabel">今日还能花</p>
+              <h2 class="budget-remaining-value budget-daily-value" id="budgetDailyRemaining">¥0.00</h2>
+            </div>
+            <div class="budget-stats-block">
+              <span>已花 <span id="budgetDailySpent">¥0.00</span> / <span id="budgetDailyTotal">¥0.00</span></span>
+              <span id="budgetDailyPercent">0%</span>
+            </div>
           </div>
-          <div class="budget-stats-block">
-            <span>已花 <span id="budgetSpent">¥0.00</span> / 预算 <span id="budgetTotal">¥0.00</span></span>
-            <span id="budgetPercent">0%</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="budgetDailyProgress" style="width: 0%"></div>
           </div>
-        </div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-fill" id="budgetProgress" style="width: 0%"></div>
         </div>
         <div class="budget-category-list" id="budgetCategoryList"></div>
+        <div class="budget-block" id="budgetPrimaryBlock">
+          <div class="budget-main-row">
+            <div class="budget-info-block">
+              <p class="budget-remaining-label" id="budgetRemainingLabel">剩余预算</p>
+              <h2 class="budget-remaining-value" id="budgetRemaining">¥0.00</h2>
+            </div>
+            <div class="budget-stats-block">
+              <span>已花 <span id="budgetSpent">¥0.00</span> / 预算 <span id="budgetTotal">¥0.00</span></span>
+              <span id="budgetPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="budgetProgress" style="width: 0%"></div>
+          </div>
+        </div>
       </section>
 
       <!-- 账单列表容器 -->
@@ -370,11 +387,18 @@
                 <input type="datetime-local" id="billTime" required>
               </div>
             </div>
-            <label class="settings-switch-row bill-budget-row" id="billIncludeBudgetRow">
-              <span><strong>计入今日预算</strong></span>
-              <input class="settings-switch-input" id="billIncludeBudget" type="checkbox" checked />
-              <span class="settings-switch" aria-hidden="true"></span>
-            </label>
+            <div class="bill-budget-switches" id="billIncludeBudgetRow">
+              <label class="settings-switch-row bill-budget-row">
+                <span><strong id="billIncludeDailyLabel">计入今日预算</strong></span>
+                <input class="settings-switch-input" id="billIncludeBudget" type="checkbox" checked />
+                <span class="settings-switch" aria-hidden="true"></span>
+              </label>
+              <label class="settings-switch-row bill-budget-row" id="billIncludeMonthlyRow" hidden>
+                <span><strong>计入今月预算</strong></span>
+                <input class="settings-switch-input" id="billIncludeMonthlyBudget" type="checkbox" checked />
+                <span class="settings-switch" aria-hidden="true"></span>
+              </label>
+            </div>
             <div class="bill-field bill-note-field">
               <label for="billNote">备注</label>
               <input type="text" id="billNote" placeholder="可选备注">
@@ -450,11 +474,20 @@
             <button type="button" class="bill-type-tab active" data-period="daily">每日</button>
             <button type="button" class="bill-type-tab" data-period="weekly">每周</button>
             <button type="button" class="bill-type-tab" data-period="monthly">每月</button>
+            <button type="button" class="bill-type-tab" data-period="hybrid">混合</button>
           </div>
+          <p class="field-hint" id="budgetPeriodHint" hidden style="margin: 8px 0 0 4px;">混合：记账时可分别选择是否计入今日 / 今月；分类限额按月。</p>
         </div>
-        <div class="bill-field">
+        <div class="bill-field" id="budgetSingleAmountField">
           <label for="budgetAmountInput" id="budgetAmountLabel">总预算金额 (¥)</label>
-          <input type="number" id="budgetAmountInput" step="0.01" placeholder="0.00" required>
+          <input type="number" id="budgetAmountInput" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="bill-field" id="budgetHybridAmountsField" hidden>
+          <label for="budgetDailyAmountInput">今日预算 (¥)</label>
+          <input type="number" id="budgetDailyAmountInput" step="0.01" min="0" placeholder="0.00">
+          <label for="budgetMonthlyAmountInput" class="budget-field-label-spaced">本月预算 (¥)</label>
+          <input type="number" id="budgetMonthlyAmountInput" step="0.01" min="0" placeholder="0.00">
+          <p class="field-hint">今日与今月在记账时分别勾选是否计入。</p>
         </div>
         <div class="bill-field" id="budgetResetTimeField">
           <label for="budgetResetTimeInput">新的一天开始时间</label>
@@ -474,7 +507,7 @@
         </div>
         <div class="bill-field">
           <label>分类预算</label>
-          <p class="field-hint" style="margin: 0 0 12px 4px;">按需为支出分类单独设限，点击加号添加。</p>
+          <p class="field-hint" id="categoryBudgetHint" style="margin: 0 0 12px 4px;">按需为支出分类单独设限，点击加号添加。</p>
           <div class="category-budget-list" id="categoryBudgetList"></div>
           <button type="button" class="category-budget-add-btn" id="addCategoryBudgetBtn" aria-label="添加分类预算">
             <span class="category-budget-add-icon" aria-hidden="true">＋</span>
@@ -562,6 +595,24 @@
             <input type="text" id="newCategoryName" placeholder="新分类名称" required style="flex: 1; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: transparent; color: var(--text);">
             <button type="submit" class="accounting-btn-primary" style="width: auto; padding: 0 16px; min-height: 38px;">添加</button>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 首页月份选择 Modal -->
+    <div class="accounting-sheet-modal" id="homeMonthPickerModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="accounting-sheet home-month-picker-sheet">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">选择月份</h2>
+          <button class="accounting-sheet-close" id="homeMonthPickerCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="home-month-year-nav">
+            <button type="button" class="date-nav-btn" id="homeMonthPrevYear" aria-label="上一年">‹</button>
+            <span id="homeMonthPickerYear" class="home-month-year-label">2026年</span>
+            <button type="button" class="date-nav-btn" id="homeMonthNextYear" aria-label="下一年">›</button>
+          </div>
+          <div class="home-month-grid" id="homeMonthGrid" role="listbox" aria-label="月份列表"></div>
         </div>
       </div>
     </div>

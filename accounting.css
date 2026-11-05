@@ -64,8 +64,27 @@
 
 .current-date {
   margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: 13px;
   color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.current-date::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.7;
 }
 
 .accounting-settings-btn {
@@ -356,6 +375,8 @@
 
 /* 每日预算卡片 */
 .budget-card {
+  display: flex;
+  flex-direction: column;
   padding: 16px 20px;
 }
 
@@ -367,6 +388,31 @@
 .budget-card.clickable-card:active {
   transform: scale(0.98);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* 非混合：总预算 → 分类；混合：今日 → 分类 → 本月 */
+.budget-card:not(.is-hybrid) #budgetPrimaryBlock { order: 1; }
+.budget-card:not(.is-hybrid) #budgetCategoryList { order: 2; }
+.budget-card:not(.is-hybrid) #budgetDailyBlock { order: 3; }
+
+.budget-card.is-hybrid #budgetDailyBlock { order: 1; }
+.budget-card.is-hybrid #budgetCategoryList { order: 2; }
+.budget-card.is-hybrid #budgetPrimaryBlock { order: 3; }
+
+.budget-card.is-hybrid #budgetCategoryList.has-items,
+.budget-card.is-hybrid #budgetPrimaryBlock,
+.budget-card:not(.is-hybrid) #budgetCategoryList.has-items {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.budget-daily-block .budget-daily-value {
+  font-size: 20px;
+}
+
+.budget-card.is-hybrid #budgetPrimaryBlock .budget-remaining-value {
+  font-size: 20px;
 }
 
 .budget-main-row {
@@ -415,9 +461,6 @@
   display: none;
   flex-direction: column;
   gap: 10px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .budget-category-list.has-items {
@@ -458,6 +501,28 @@
 
 .budget-period-tabs {
   margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.budget-period-tabs .bill-type-tab {
+  flex: 1 1 calc(50% - 4px);
+  min-width: 0;
+  padding: 8px 6px;
+  font-size: 13px;
+}
+
+.budget-field-label-spaced {
+  display: block;
+  margin-top: 14px;
+}
+
+#budgetPeriodHint[hidden],
+#budgetHybridAmountsField[hidden],
+#budgetSingleAmountField[hidden],
+#budgetDailyBlock[hidden],
+#billIncludeMonthlyRow[hidden] {
+  display: none !important;
 }
 
 .category-budget-list {
@@ -1140,16 +1205,49 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-#addBillModal .bill-budget-row {
+#addBillModal .bill-budget-switches {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
+}
+
+#addBillModal .bill-budget-switches:not(.is-hybrid) .bill-budget-row {
+  flex: 1;
+}
+
+#addBillModal .bill-budget-switches.is-hybrid .bill-budget-row {
+  flex: 1;
+  min-width: 0;
+}
+
+#addBillModal .bill-budget-row {
+  margin-bottom: 0;
   padding: 2px 0;
+  gap: 8px;
 }
 
 #addBillModal .bill-budget-row strong {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 12px;
   padding-left: 2px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+#addBillModal .bill-budget-row .settings-switch {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 24px;
+}
+
+#addBillModal .bill-budget-row .settings-switch::after {
+  width: 18px;
+  height: 18px;
+}
+
+#addBillModal .bill-budget-row .settings-switch-input:checked + .settings-switch::after {
+  transform: translateX(16px);
 }
 
 #addBillModal .bill-note-field {
@@ -1790,4 +1888,75 @@
 #pwaIconStatus {
   min-height: 1.2em;
   margin-top: 10px;
+}
+
+/* 首页月份选择半屏 */
+.home-month-picker-sheet {
+  max-height: 55dvh;
+}
+
+.home-month-year-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.home-month-year-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 8px;
+}
+
+.home-month-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: 10px 4px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.home-month-cell:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.home-month-cell.is-selected {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.home-month-cell.is-future {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.home-month-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.home-month-cell.is-selected .home-month-dot {
+  background: var(--paper);
+}
+
+.home-month-dot.is-empty {
+  visibility: hidden;
 }

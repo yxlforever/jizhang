@@ -78,6 +78,7 @@
     bills: [],
     settings: {
       dailyBudget: 50.00,
+      monthlyBudget: 1500.00,
       totalBudget: 50.00,
       budgetPeriod: 'daily',
       resetHour: 7,
@@ -92,10 +93,27 @@
 
   let editingBillId = null;
 
+  const nowInit = new Date();
+  let homeViewMonth = {
+    year: nowInit.getFullYear(),
+    month: nowInit.getMonth()
+  };
+  let homeMonthPickerYear = homeViewMonth.year;
+
   const BUDGET_PERIOD_META = {
     daily: { amountLabel: '每日总预算 (¥)', remaining: '剩余今日预算', over: '今日超支', include: '计入今日预算' },
     weekly: { amountLabel: '每周总预算 (¥)', remaining: '剩余本周预算', over: '本周超支', include: '计入本周预算' },
-    monthly: { amountLabel: '每月总预算 (¥)', remaining: '剩余本月预算', over: '本月超支', include: '计入本月预算' }
+    monthly: { amountLabel: '每月总预算 (¥)', remaining: '剩余本月预算', over: '本月超支', include: '计入本月预算' },
+    hybrid: {
+      amountLabel: '今日预算 (¥)',
+      remaining: '剩余本月预算',
+      over: '本月超支',
+      include: '计入今日预算',
+      dailyRemaining: '今日还能花',
+      dailyOver: '今日已多花',
+      dailyUsedUp: '今日参考已用完',
+      categoryHint: '分类限额按自然月计算，与今日预算独立。'
+    }
   };
 
   const normalizeBudgetSettings = () => {
@@ -103,12 +121,35 @@
     if (!s.budgetPeriod || !BUDGET_PERIOD_META[s.budgetPeriod]) {
       s.budgetPeriod = 'daily';
     }
-    if (s.totalBudget == null || isNaN(parseFloat(s.totalBudget))) {
-      s.totalBudget = parseFloat(s.dailyBudget) || 50;
+
+    const parsedTotal = parseFloat(s.totalBudget);
+    const parsedDaily = parseFloat(s.dailyBudget);
+    const parsedMonthly = parseFloat(s.monthlyBudget);
+
+    if (s.budgetPeriod === 'hybrid') {
+      s.dailyBudget = !isNaN(parsedDaily) && parsedDaily > 0
+        ? parsedDaily
+        : (!isNaN(parsedTotal) && parsedTotal > 0 ? parsedTotal : 50);
+      s.monthlyBudget = !isNaN(parsedMonthly) && parsedMonthly > 0
+        ? parsedMonthly
+        : Math.round(s.dailyBudget * 30 * 100) / 100;
+      s.totalBudget = s.monthlyBudget;
     } else {
-      s.totalBudget = parseFloat(s.totalBudget);
+      if (s.totalBudget == null || isNaN(parsedTotal)) {
+        s.totalBudget = !isNaN(parsedDaily) && parsedDaily > 0 ? parsedDaily : 50;
+      } else {
+        s.totalBudget = parsedTotal;
+      }
+      s.dailyBudget = s.totalBudget;
+      if (isNaN(parsedMonthly) || parsedMonthly <= 0) {
+        s.monthlyBudget = s.budgetPeriod === 'monthly'
+          ? s.totalBudget
+          : Math.round(s.totalBudget * 30 * 100) / 100;
+      } else {
+        s.monthlyBudget = parsedMonthly;
+      }
     }
-    s.dailyBudget = s.totalBudget;
+
     if (!s.categoryBudgets || typeof s.categoryBudgets !== 'object' || Array.isArray(s.categoryBudgets)) {
       s.categoryBudgets = {};
     }
@@ -157,8 +198,9 @@
     return d.getTime();
   };
 
-  const getBudgetPeriodStart = (date = new Date()) => {
-    const period = accountingData.settings.budgetPeriod || 'daily';
+  const getBudgetPeriodStart = (date = new Date(), periodOverride) => {
+    let period = periodOverride || accountingData.settings.budgetPeriod || 'daily';
+    if (period === 'hybrid') period = 'monthly';
     const d = new Date(getBudgetDay(date));
     if (period === 'weekly') {
       const day = d.getDay();
@@ -171,8 +213,21 @@
     return d.getTime();
   };
 
+  const isInCurrentBudgetDay = (timestamp) => {
+    return getBudgetDay(new Date(timestamp)) === getBudgetDay();
+  };
+
+  const isInCurrentBudgetMonth = (timestamp) => {
+    const billDate = new Date(getBudgetDay(new Date(timestamp)));
+    const startDate = new Date(getBudgetPeriodStart(new Date(), 'monthly'));
+    return billDate.getFullYear() === startDate.getFullYear() &&
+      billDate.getMonth() === startDate.getMonth();
+  };
+
   const isInCurrentBudgetPeriod = (timestamp) => {
     const period = accountingData.settings.budgetPeriod || 'daily';
+    if (period === 'hybrid') return isInCurrentBudgetMonth(timestamp);
+
     const billBudgetDay = getBudgetDay(new Date(timestamp));
     const periodStart = getBudgetPeriodStart();
 
@@ -180,16 +235,71 @@
     if (period === 'weekly') {
       return billBudgetDay >= periodStart && billBudgetDay < periodStart + 7 * 86400000;
     }
-    const billDate = new Date(billBudgetDay);
-    const startDate = new Date(periodStart);
-    return billDate.getFullYear() === startDate.getFullYear() &&
-      billDate.getMonth() === startDate.getMonth();
+    return isInCurrentBudgetMonth(timestamp);
   };
 
   const shouldIncludeBillInBudget = (bill) => {
     if (bill.type !== 'expense') return false;
     if (bill.includeInBudget !== undefined) return !!bill.includeInBudget;
     return accountingData.settings.budgetCategories.includes(bill.categoryId);
+  };
+
+  const countsTowardDailyBudget = (bill) => {
+    if (bill.type !== 'expense') return false;
+    if (bill.includeInBudget !== undefined) return !!bill.includeInBudget;
+    return true;
+  };
+
+  const countsTowardMonthlyBudget = (bill) => {
+    if (bill.type !== 'expense') return false;
+    if (bill.includeInMonthlyBudget !== undefined) return !!bill.includeInMonthlyBudget;
+    return true;
+  };
+
+  const applyBudgetBlockUI = ({
+    remainingEl,
+    labelEl,
+    spentEl,
+    totalEl,
+    percentEl,
+    progressEl,
+    spent,
+    total,
+    remainingLabel,
+    overLabel,
+    usedUpLabel,
+    softOver
+  }) => {
+    const isOver = spent > total && total > 0;
+    const isUsedUp = !isOver && total > 0 && spent >= total;
+    const diff = isOver ? spent - total : Math.max(0, total - spent);
+    const percent = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
+
+    if (labelEl) {
+      if (isOver) labelEl.textContent = overLabel;
+      else if (isUsedUp && usedUpLabel) labelEl.textContent = usedUpLabel;
+      else labelEl.textContent = remainingLabel;
+    }
+
+    if (remainingEl) {
+      if (isOver) {
+        remainingEl.textContent = softOver ? formatCurrency(diff) : ('-¥' + diff.toFixed(2));
+        remainingEl.style.color = 'var(--expense)';
+      } else {
+        remainingEl.textContent = formatCurrency(diff);
+        remainingEl.style.color = '';
+      }
+    }
+
+    if (progressEl) {
+      progressEl.style.width = `${percent}%`;
+      progressEl.style.backgroundColor = isOver ? 'var(--expense)' : '';
+    }
+    if (spentEl) spentEl.textContent = formatCurrency(spent);
+    if (totalEl) totalEl.textContent = formatCurrency(total);
+    if (percentEl) percentEl.textContent = `${percent}%`;
+
+    return { isOver, percent, diff };
   };
 
   const BILL_SWIPE_WIDTH = 72;
@@ -313,9 +423,29 @@
     });
   };
 
+  const isHomeViewCurrentMonth = () => {
+    const now = new Date();
+    return homeViewMonth.year === now.getFullYear() && homeViewMonth.month === now.getMonth();
+  };
+
+  const getMonthsWithBills = (year) => {
+    const months = new Set();
+    accountingData.bills.forEach(bill => {
+      const d = new Date(bill.timestamp);
+      if (d.getFullYear() === year) months.add(d.getMonth());
+    });
+    return months;
+  };
+
   const updateUI = () => {
     const now = new Date();
-    accountingDate.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+    if (accountingDate) {
+      if (isHomeViewCurrentMonth()) {
+        accountingDate.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+      } else {
+        accountingDate.textContent = `${homeViewMonth.year}年${homeViewMonth.month + 1}月`;
+      }
+    }
 
     // Calculate Totals
     let totalBalance = parseFloat(accountingData.settings.initialAssets) || 0;
@@ -324,8 +454,8 @@
     let todayIncome = 0;
     let todayExpense = 0;
     
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const viewMonth = homeViewMonth.month;
+    const viewYear = homeViewMonth.year;
     const todayStart = getCalendarDay();
 
     const uniqueDays = new Set();
@@ -339,7 +469,7 @@
 
       if (bill.type === 'income') {
         totalBalance += amount;
-        if (billDate.getMonth() === currentMonth && billDate.getFullYear() === currentYear) {
+        if (billDate.getMonth() === viewMonth && billDate.getFullYear() === viewYear) {
           monthIncome += amount;
         }
         if (billCalendarDay === todayStart) {
@@ -347,7 +477,7 @@
         }
       } else {
         totalBalance -= amount;
-        if (billDate.getMonth() === currentMonth && billDate.getFullYear() === currentYear) {
+        if (billDate.getMonth() === viewMonth && billDate.getFullYear() === viewYear) {
           monthExpense += amount;
         }
         if (billCalendarDay === todayStart) {
@@ -359,6 +489,15 @@
     totalBalanceEl.textContent = formatCurrency(totalBalance);
     monthIncomeEl.textContent = formatCurrency(monthIncome);
     monthExpenseEl.textContent = formatCurrency(monthExpense);
+    const monthIncomeLabel = document.getElementById('monthIncomeLabel');
+    const monthExpenseLabel = document.getElementById('monthExpenseLabel');
+    if (isHomeViewCurrentMonth()) {
+      if (monthIncomeLabel) monthIncomeLabel.textContent = '本月收入';
+      if (monthExpenseLabel) monthExpenseLabel.textContent = '本月支出';
+    } else {
+      if (monthIncomeLabel) monthIncomeLabel.textContent = `${viewMonth + 1}月收入`;
+      if (monthExpenseLabel) monthExpenseLabel.textContent = `${viewMonth + 1}月支出`;
+    }
     if (todayIncomeEl) todayIncomeEl.textContent = formatCurrency(todayIncome);
     if (todayExpenseEl) todayExpenseEl.textContent = formatCurrency(todayExpense);
 
@@ -372,49 +511,69 @@
 
     // Calculate Period Budget
     normalizeBudgetSettings();
-    const periodMeta = BUDGET_PERIOD_META[accountingData.settings.budgetPeriod] || BUDGET_PERIOD_META.daily;
+    const budgetPeriod = accountingData.settings.budgetPeriod || 'daily';
+    const periodMeta = BUDGET_PERIOD_META[budgetPeriod] || BUDGET_PERIOD_META.daily;
+    const isHybrid = budgetPeriod === 'hybrid';
     let periodSpent = 0;
+    let dailySpent = 0;
     const spentByCategory = {};
 
     accountingData.bills.forEach(bill => {
-      if (!isInCurrentBudgetPeriod(bill.timestamp) || !shouldIncludeBillInBudget(bill)) return;
+      if (bill.type !== 'expense') return;
       const amount = parseFloat(bill.amount) || 0;
+
+      if (isHybrid) {
+        if (isInCurrentBudgetMonth(bill.timestamp) && countsTowardMonthlyBudget(bill)) {
+          periodSpent += amount;
+          spentByCategory[bill.categoryId] = (spentByCategory[bill.categoryId] || 0) + amount;
+        }
+        if (isInCurrentBudgetDay(bill.timestamp) && countsTowardDailyBudget(bill)) {
+          dailySpent += amount;
+        }
+        return;
+      }
+
+      if (!isInCurrentBudgetPeriod(bill.timestamp) || !shouldIncludeBillInBudget(bill)) return;
       periodSpent += amount;
       spentByCategory[bill.categoryId] = (spentByCategory[bill.categoryId] || 0) + amount;
     });
 
-    const budgetTotal = parseFloat(accountingData.settings.totalBudget) || 0;
-    const isOverBudget = periodSpent > budgetTotal;
-    const budgetRemaining = isOverBudget ? periodSpent - budgetTotal : budgetTotal - periodSpent;
-    const budgetPercent = budgetTotal > 0
-      ? Math.min(100, Math.round((periodSpent / budgetTotal) * 100))
-      : 0;
+    const budgetCardEl = document.getElementById('budgetCard');
+    if (budgetCardEl) budgetCardEl.classList.toggle('is-hybrid', isHybrid);
 
-    const remainingLabelEl = document.getElementById('budgetRemainingLabel') ||
-      document.querySelector('.budget-remaining-label');
-    if (remainingLabelEl) {
-      remainingLabelEl.textContent = isOverBudget ? periodMeta.over : periodMeta.remaining;
+    const budgetTotal = isHybrid
+      ? (parseFloat(accountingData.settings.monthlyBudget) || 0)
+      : (parseFloat(accountingData.settings.totalBudget) || 0);
+
+    const budgetDailyBlockEl = document.getElementById('budgetDailyBlock');
+    if (budgetDailyBlockEl) {
+      if (isHybrid) {
+        budgetDailyBlockEl.hidden = false;
+        const dailyTotal = parseFloat(accountingData.settings.dailyBudget) || 0;
+        applyBudgetBlockUI({
+          remainingEl: document.getElementById('budgetDailyRemaining'),
+          labelEl: document.getElementById('budgetDailyLabel'),
+          spentEl: document.getElementById('budgetDailySpent'),
+          totalEl: document.getElementById('budgetDailyTotal'),
+          percentEl: document.getElementById('budgetDailyPercent'),
+          progressEl: document.getElementById('budgetDailyProgress'),
+          spent: dailySpent,
+          total: dailyTotal,
+          remainingLabel: periodMeta.dailyRemaining,
+          overLabel: periodMeta.dailyOver,
+          usedUpLabel: periodMeta.dailyUsedUp,
+          softOver: true
+        });
+      } else {
+        budgetDailyBlockEl.hidden = true;
+      }
     }
-
-    if (isOverBudget) {
-      budgetRemainingEl.textContent = '-¥' + budgetRemaining.toFixed(2);
-      budgetRemainingEl.style.color = 'var(--expense)';
-      budgetProgressEl.style.backgroundColor = 'var(--expense)';
-    } else {
-      budgetRemainingEl.textContent = formatCurrency(budgetRemaining);
-      budgetRemainingEl.style.color = '';
-      budgetProgressEl.style.backgroundColor = '';
-    }
-
-    budgetSpentEl.textContent = formatCurrency(periodSpent);
-    budgetTotalEl.textContent = formatCurrency(budgetTotal);
-    budgetPercentEl.textContent = `${budgetPercent}%`;
-    budgetProgressEl.style.width = `${budgetPercent}%`;
 
     const budgetCategoryListEl = document.getElementById('budgetCategoryList');
     if (budgetCategoryListEl) {
       const categoryList = accountingData.settings.categories || DEFAULT_CATEGORIES;
       const categoryBudgets = accountingData.settings.categoryBudgets || {};
+      const categoryPeriodTag = isHybrid ? ' · 本月' : '';
       const rows = categoryList
         .filter(cat => cat.type === 'expense' && parseFloat(categoryBudgets[cat.id]) > 0)
         .map(cat => {
@@ -425,7 +584,7 @@
           return `
             <div class="budget-category-item">
               <div class="budget-category-item-head">
-                <span class="budget-category-item-name">${cat.name}</span>
+                <span class="budget-category-item-name">${cat.name}${categoryPeriodTag}</span>
                 <span class="budget-category-item-meta">${formatCurrency(spent)} / ${formatCurrency(limit)}</span>
               </div>
               <div class="progress-bar-wrap">
@@ -438,22 +597,37 @@
       budgetCategoryListEl.classList.toggle('has-items', rows.length > 0);
     }
 
-    const includeBudgetLabel = document.querySelector('#billIncludeBudgetRow strong');
-    if (includeBudgetLabel) {
-      includeBudgetLabel.textContent = periodMeta.include;
-    }
+    applyBudgetBlockUI({
+      remainingEl: budgetRemainingEl,
+      labelEl: document.getElementById('budgetRemainingLabel'),
+      spentEl: budgetSpentEl,
+      totalEl: budgetTotalEl,
+      percentEl: budgetPercentEl,
+      progressEl: budgetProgressEl,
+      spent: periodSpent,
+      total: budgetTotal,
+      remainingLabel: periodMeta.remaining,
+      overLabel: periodMeta.over
+    });
 
-    // Render Bills Grouped by Day
+    syncBillBudgetSwitchUI(periodMeta);
+
+    // Render Bills Grouped by Day (selected month only)
     if (billsListContainer) {
       billsListContainer.innerHTML = '';
       openBillSwipeItem = null;
+
+      const monthBills = accountingData.bills.filter(bill => {
+        const d = new Date(bill.timestamp);
+        return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
+      });
       
-      if (accountingData.bills.length === 0) {
+      if (monthBills.length === 0) {
         const emptySection = document.createElement('section');
         emptySection.className = 'accounting-card recent-bills-card';
         emptySection.innerHTML = `
           <div class="empty-bills">
-            <p>还没有账单</p>
+            <p>${accountingData.bills.length === 0 ? '还没有账单' : '这个月还没有账单'}</p>
             <button class="start-accounting-btn" id="startAccountingBtn">开始记账</button>
           </div>
         `;
@@ -466,7 +640,7 @@
       } else {
         // Group by day
         const groupedBills = {};
-        accountingData.bills.forEach(bill => {
+        monthBills.forEach(bill => {
           const dayTime = getCalendarDay(new Date(bill.timestamp));
           if (!groupedBills[dayTime]) {
             groupedBills[dayTime] = [];
@@ -684,8 +858,13 @@
       if (includeRow) includeRow.style.display = 'none';
     } else {
       if (includeRow) includeRow.style.display = 'flex';
+      syncBillBudgetSwitchUI();
       const includeCheckbox = document.getElementById('billIncludeBudget');
       if (includeCheckbox) includeCheckbox.checked = bill.includeInBudget !== false;
+      const includeMonthlyCheckbox = document.getElementById('billIncludeMonthlyBudget');
+      if (includeMonthlyCheckbox) {
+        includeMonthlyCheckbox.checked = bill.includeInMonthlyBudget !== false;
+      }
     }
 
     // Handle delete button
@@ -767,8 +946,8 @@
     updateCategorySelect('expense');
     const includeRow = document.getElementById('billIncludeBudgetRow');
     if (includeRow) includeRow.style.display = 'flex';
-    const includeCheckbox = document.getElementById('billIncludeBudget');
-    if (includeCheckbox) includeCheckbox.checked = true;
+    syncBillBudgetSwitchUI();
+    syncBillIncludeBudgetDefault();
     
     billAmountInput.value = '';
     document.getElementById('billNote').value = '';
@@ -794,6 +973,12 @@
   const budgetSettingsBack = document.getElementById('budgetSettingsBack');
   const budgetAmountInput = document.getElementById('budgetAmountInput');
   const budgetAmountLabel = document.getElementById('budgetAmountLabel');
+  const budgetDailyAmountInput = document.getElementById('budgetDailyAmountInput');
+  const budgetMonthlyAmountInput = document.getElementById('budgetMonthlyAmountInput');
+  const budgetSingleAmountField = document.getElementById('budgetSingleAmountField');
+  const budgetHybridAmountsField = document.getElementById('budgetHybridAmountsField');
+  const budgetPeriodHint = document.getElementById('budgetPeriodHint');
+  const categoryBudgetHint = document.getElementById('categoryBudgetHint');
   const budgetResetTimeInput = document.getElementById('budgetResetTimeInput');
   const budgetPeriodTabs = document.querySelectorAll('#budgetPeriodTabs .bill-type-tab');
   const categoryBudgetList = document.getElementById('categoryBudgetList');
@@ -808,11 +993,20 @@
 
   const syncBudgetPeriodUI = (period) => {
     draftBudgetPeriod = period;
+    const isHybrid = period === 'hybrid';
     budgetPeriodTabs.forEach(tab => {
       tab.classList.toggle('active', tab.dataset.period === period);
     });
     const meta = BUDGET_PERIOD_META[period] || BUDGET_PERIOD_META.daily;
     if (budgetAmountLabel) budgetAmountLabel.textContent = meta.amountLabel;
+    if (budgetSingleAmountField) budgetSingleAmountField.hidden = isHybrid;
+    if (budgetHybridAmountsField) budgetHybridAmountsField.hidden = !isHybrid;
+    if (budgetPeriodHint) budgetPeriodHint.hidden = !isHybrid;
+    if (categoryBudgetHint) {
+      categoryBudgetHint.textContent = isHybrid
+        ? (meta.categoryHint || '分类限额按自然月计算，与今日预算独立。')
+        : '按需为支出分类单独设限，点击加号添加。';
+    }
   };
 
   const getExpenseCategories = () => {
@@ -898,7 +1092,9 @@
   const openBudgetSettingsPage = () => {
     normalizeBudgetSettings();
     syncBudgetPeriodUI(accountingData.settings.budgetPeriod);
-    budgetAmountInput.value = accountingData.settings.totalBudget;
+    if (budgetAmountInput) budgetAmountInput.value = accountingData.settings.totalBudget;
+    if (budgetDailyAmountInput) budgetDailyAmountInput.value = accountingData.settings.dailyBudget;
+    if (budgetMonthlyAmountInput) budgetMonthlyAmountInput.value = accountingData.settings.monthlyBudget;
     budgetResetTimeInput.value = accountingData.settings.resetHour;
 
     const categoryBudgets = accountingData.settings.categoryBudgets || {};
@@ -1138,15 +1334,31 @@
   budgetSettingsForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const amount = parseFloat(budgetAmountInput.value);
     const resetHour = parseInt(budgetResetTimeInput.value, 10);
+    accountingData.settings.budgetPeriod = draftBudgetPeriod;
 
-    if (!isNaN(amount) && amount > 0) {
+    if (draftBudgetPeriod === 'hybrid') {
+      const dailyAmount = parseFloat(budgetDailyAmountInput && budgetDailyAmountInput.value);
+      const monthlyAmount = parseFloat(budgetMonthlyAmountInput && budgetMonthlyAmountInput.value);
+      if (isNaN(dailyAmount) || dailyAmount <= 0 || isNaN(monthlyAmount) || monthlyAmount <= 0) {
+        alert('请填写有效的今日预算和本月预算');
+        return;
+      }
+      accountingData.settings.dailyBudget = dailyAmount;
+      accountingData.settings.monthlyBudget = monthlyAmount;
+      accountingData.settings.totalBudget = monthlyAmount;
+    } else {
+      const amount = parseFloat(budgetAmountInput && budgetAmountInput.value);
+      if (isNaN(amount) || amount <= 0) {
+        alert('请填写有效的预算金额');
+        return;
+      }
       accountingData.settings.totalBudget = amount;
       accountingData.settings.dailyBudget = amount;
+      if (draftBudgetPeriod === 'monthly') {
+        accountingData.settings.monthlyBudget = amount;
+      }
     }
-
-    accountingData.settings.budgetPeriod = draftBudgetPeriod;
 
     if (!isNaN(resetHour) && resetHour >= 0 && resetHour <= 23) {
       accountingData.settings.resetHour = resetHour;
@@ -1168,6 +1380,26 @@
   });
 
   const billIncludeBudgetRow = document.getElementById('billIncludeBudgetRow');
+  const billIncludeMonthlyRow = document.getElementById('billIncludeMonthlyRow');
+  const billIncludeDailyLabel = document.getElementById('billIncludeDailyLabel');
+
+  const syncBillBudgetSwitchUI = (periodMeta) => {
+    const period = accountingData.settings.budgetPeriod || 'daily';
+    const isHybrid = period === 'hybrid';
+    const meta = periodMeta || BUDGET_PERIOD_META[period] || BUDGET_PERIOD_META.daily;
+    if (billIncludeDailyLabel) {
+      billIncludeDailyLabel.textContent = isHybrid ? '计入今日预算' : meta.include;
+    }
+    if (billIncludeMonthlyRow) billIncludeMonthlyRow.hidden = !isHybrid;
+    if (billIncludeBudgetRow) billIncludeBudgetRow.classList.toggle('is-hybrid', isHybrid);
+  };
+
+  const syncBillIncludeBudgetDefault = () => {
+    const includeCheckbox = document.getElementById('billIncludeBudget');
+    const includeMonthlyCheckbox = document.getElementById('billIncludeMonthlyBudget');
+    if (includeCheckbox) includeCheckbox.checked = true;
+    if (includeMonthlyCheckbox) includeMonthlyCheckbox.checked = true;
+  };
 
   billTypeTabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -1175,9 +1407,11 @@
       tab.classList.add('active');
       updateCategorySelect(tab.dataset.type);
       if (tab.dataset.type === 'income') {
-        billIncludeBudgetRow.style.display = 'none';
+        if (billIncludeBudgetRow) billIncludeBudgetRow.style.display = 'none';
       } else {
-        billIncludeBudgetRow.style.display = 'flex';
+        if (billIncludeBudgetRow) billIncludeBudgetRow.style.display = 'flex';
+        syncBillBudgetSwitchUI();
+        syncBillIncludeBudgetDefault();
       }
     });
   });
@@ -1283,6 +1517,8 @@
     const timestamp = new Date(billTimeInput.value).getTime();
     const note = document.getElementById('billNote').value;
     const includeInBudget = document.getElementById('billIncludeBudget').checked;
+    const includeMonthlyEl = document.getElementById('billIncludeMonthlyBudget');
+    const includeInMonthlyBudget = includeMonthlyEl ? includeMonthlyEl.checked : true;
 
     if (isNaN(amount) || amount <= 0) return;
 
@@ -1296,7 +1532,8 @@
           categoryId,
           timestamp,
           note,
-          includeInBudget
+          includeInBudget,
+          includeInMonthlyBudget
         };
       }
     } else {
@@ -1307,7 +1544,8 @@
         categoryId,
         timestamp,
         note,
-        includeInBudget
+        includeInBudget,
+        includeInMonthlyBudget
       };
       accountingData.bills.push(newBill);
     }
@@ -1406,7 +1644,10 @@
         else byCalendarDay[calendarDay].income += amount;
       }
 
-      if (shouldIncludeBillInBudget(bill)) {
+      const countsForDayBudget = (accountingData.settings.budgetPeriod || 'daily') === 'hybrid'
+        ? countsTowardDailyBudget(bill)
+        : shouldIncludeBillInBudget(bill);
+      if (countsForDayBudget) {
         const budgetDay = getBudgetDay(billDate);
         budgetSpendByDay[budgetDay] = (budgetSpendByDay[budgetDay] || 0) + amount;
       }
@@ -1426,8 +1667,11 @@
 
     const stats = dayStats[selectedDay] || { expense: 0, income: 0 };
     const d = new Date(selectedDay);
-    const isDailyBudget = (accountingData.settings.budgetPeriod || 'daily') === 'daily';
-    const budgetTotal = parseFloat(accountingData.settings.totalBudget) || 0;
+    const budgetPeriod = accountingData.settings.budgetPeriod || 'daily';
+    const usesDailyBudget = budgetPeriod === 'daily' || budgetPeriod === 'hybrid';
+    const budgetTotal = budgetPeriod === 'hybrid'
+      ? (parseFloat(accountingData.settings.dailyBudget) || 0)
+      : (parseFloat(accountingData.settings.totalBudget) || 0);
     const budgetSpent = budgetSpendByDay[selectedDay] || 0;
 
     if (billsDayDetailDate) {
@@ -1437,12 +1681,12 @@
     if (billsDayIncome) billsDayIncome.textContent = formatCurrency(stats.income);
 
     if (billsDayBudgetWrap && billsDayBudget) {
-      if (isDailyBudget && budgetTotal > 0) {
+      if (usesDailyBudget && budgetTotal > 0) {
         billsDayBudgetWrap.hidden = false;
         const over = budgetSpent > budgetTotal;
         const diff = Math.abs(budgetSpent - budgetTotal);
         billsDayBudget.textContent = over
-          ? `超支 ${formatCurrency(diff)}`
+          ? (budgetPeriod === 'hybrid' ? `今日已多花 ${formatCurrency(diff)}` : `超支 ${formatCurrency(diff)}`)
           : `预算剩余 ${formatCurrency(diff)}`;
         billsDayBudget.classList.toggle('is-over', over);
       } else {
@@ -1467,8 +1711,11 @@
     normalizeBudgetSettings();
 
     const { byCalendarDay, budgetSpendByDay } = getMonthDayStats(year, month);
-    const isDailyBudget = (accountingData.settings.budgetPeriod || 'daily') === 'daily';
-    const budgetTotal = parseFloat(accountingData.settings.totalBudget) || 0;
+    const budgetPeriod = accountingData.settings.budgetPeriod || 'daily';
+    const isDailyBudget = budgetPeriod === 'daily' || budgetPeriod === 'hybrid';
+    const budgetTotal = budgetPeriod === 'hybrid'
+      ? (parseFloat(accountingData.settings.dailyBudget) || 0)
+      : (parseFloat(accountingData.settings.totalBudget) || 0);
     const todayStart = getCalendarDay();
     const firstDay = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2035,7 +2282,8 @@
           accountingData = {
             bills: Array.isArray(imported.bills) ? imported.bills : [],
             settings: {
-              dailyBudget: imported.settings.totalBudget ?? imported.settings.dailyBudget ?? 50.00,
+              dailyBudget: imported.settings.dailyBudget ?? imported.settings.totalBudget ?? 50.00,
+              monthlyBudget: imported.settings.monthlyBudget ?? null,
               totalBudget: imported.settings.totalBudget ?? imported.settings.dailyBudget ?? 50.00,
               budgetPeriod: imported.settings.budgetPeriod || 'daily',
               resetHour: imported.settings.resetHour ?? 7,
@@ -2187,6 +2435,101 @@
         newCategoryName.value = '';
         renderCategoryList();
       }
+    });
+  }
+
+  // Home month picker
+  const homeMonthPickerModal = document.getElementById('homeMonthPickerModal');
+  const homeMonthPickerCancel = document.getElementById('homeMonthPickerCancel');
+  const homeMonthPickerYearEl = document.getElementById('homeMonthPickerYear');
+  const homeMonthGrid = document.getElementById('homeMonthGrid');
+  const homeMonthPrevYear = document.getElementById('homeMonthPrevYear');
+  const homeMonthNextYear = document.getElementById('homeMonthNextYear');
+
+  const renderHomeMonthPicker = () => {
+    if (!homeMonthGrid || !homeMonthPickerYearEl) return;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const monthsWithBills = getMonthsWithBills(homeMonthPickerYear);
+
+    homeMonthPickerYearEl.textContent = `${homeMonthPickerYear}年`;
+    homeMonthGrid.innerHTML = '';
+
+    for (let m = 0; m < 12; m++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'home-month-cell';
+      btn.setAttribute('role', 'option');
+      btn.dataset.month = String(m);
+
+      const isSelected = homeMonthPickerYear === homeViewMonth.year && m === homeViewMonth.month;
+      const isFuture = homeMonthPickerYear > currentYear ||
+        (homeMonthPickerYear === currentYear && m > currentMonth);
+      const hasBills = monthsWithBills.has(m);
+
+      if (isSelected) btn.classList.add('is-selected');
+      if (isFuture) btn.classList.add('is-future');
+      btn.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+      btn.setAttribute('aria-label', `${homeMonthPickerYear}年${m + 1}月${hasBills ? '，有记账' : ''}`);
+
+      btn.innerHTML = `
+        <span>${m + 1}月</span>
+        <span class="home-month-dot${hasBills ? '' : ' is-empty'}"></span>
+      `;
+
+      if (!isFuture) {
+        btn.addEventListener('click', () => {
+          homeViewMonth = { year: homeMonthPickerYear, month: m };
+          closeHomeMonthPicker();
+          updateUI();
+        });
+      }
+
+      homeMonthGrid.appendChild(btn);
+    }
+  };
+
+  const openHomeMonthPicker = () => {
+    if (!homeMonthPickerModal) return;
+    homeMonthPickerYear = homeViewMonth.year;
+    renderHomeMonthPicker();
+    homeMonthPickerModal.classList.add('active');
+    homeMonthPickerModal.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeHomeMonthPicker = () => {
+    if (!homeMonthPickerModal) return;
+    homeMonthPickerModal.classList.remove('active');
+    homeMonthPickerModal.setAttribute('aria-hidden', 'true');
+  };
+
+  if (accountingDate) {
+    accountingDate.addEventListener('click', openHomeMonthPicker);
+  }
+
+  if (homeMonthPickerCancel) {
+    homeMonthPickerCancel.addEventListener('click', closeHomeMonthPicker);
+  }
+
+  if (homeMonthPickerModal) {
+    homeMonthPickerModal.addEventListener('click', (e) => {
+      if (e.target === homeMonthPickerModal) closeHomeMonthPicker();
+    });
+  }
+
+  if (homeMonthPrevYear) {
+    homeMonthPrevYear.addEventListener('click', () => {
+      homeMonthPickerYear -= 1;
+      renderHomeMonthPicker();
+    });
+  }
+
+  if (homeMonthNextYear) {
+    homeMonthNextYear.addEventListener('click', () => {
+      homeMonthPickerYear += 1;
+      renderHomeMonthPicker();
     });
   }
 
