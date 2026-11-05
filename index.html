@@ -54,7 +54,7 @@
       inset: 0;
       z-index: 100;
     }
-    .accounting-back-btn { visibility: hidden; pointer-events: none; }
+    .accounting-back-btn { display: none; }
     .settings-switch-row { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 14px; cursor: pointer; }
     .settings-switch-input { position: absolute; opacity: 0; pointer-events: none; }
     .settings-switch { position: relative; flex: 0 0 46px; width: 46px; height: 26px; border-radius: 999px; background: #d8d8d3; transition: background .2s; }
@@ -74,7 +74,10 @@
         <p class="current-date" id="accountingDate">2026年10月16日</p>
       </div>
       <button class="accounting-settings-btn" id="accountingSettingsBtn" aria-label="设置">
-        <svg viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.2 13.4 1.1.9-1.7 3-1.4-.5a7.7 7.7 0 0 1-1.8 1l-.2 1.5h-3.4l-.2-1.5a7.7 7.7 0 0 1-1.8-1l-1.4.5-1.7-3 1.1-.9a7.5 7.5 0 0 1 0-2.8l-1.1-.9 1.7-3 1.4.5a7.7 7.7 0 0 1 1.8-1l.2-1.5h3.4l.2 1.5a7.7 7.7 0 0 1 1.8 1l1.4-.5 1.7 3-1.1.9a7.5 7.5 0 0 1 0 2.8Z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
       </button>
     </header>
 
@@ -351,29 +354,47 @@
             <button type="button" class="bill-type-tab" data-type="income">收入</button>
           </div>
           <div class="add-bill-main">
-            <div class="amount-input-wrap">
+            <div class="amount-input-wrap" id="amountInputWrap" role="button" tabindex="0" aria-label="金额输入">
               <span class="currency">¥</span>
-              <input type="number" id="billAmount" step="0.01" placeholder="0.00" required autofocus>
+              <input type="text" id="billAmount" inputmode="none" readonly placeholder="0.00" required autocomplete="off">
             </div>
-            <div class="bill-field">
-              <label>分类</label>
-              <select id="billCategory" required>
-                <!-- 分类由 JS 动态加载 -->
-              </select>
+            <div class="bill-field-row">
+              <div class="bill-field">
+                <label for="billCategory">分类</label>
+                <select id="billCategory" required>
+                  <!-- 分类由 JS 动态加载 -->
+                </select>
+              </div>
+              <div class="bill-field">
+                <label for="billTime">时间</label>
+                <input type="datetime-local" id="billTime" required>
+              </div>
             </div>
-            <div class="bill-field">
-              <label>时间</label>
-              <input type="datetime-local" id="billTime" required>
-            </div>
-            <label class="settings-switch-row" id="billIncludeBudgetRow" style="margin-bottom: 20px;">
-              <span><strong style="color: var(--ink); font-size: 14px; padding-left: 4px;">计入今日预算</strong></span>
+            <label class="settings-switch-row bill-budget-row" id="billIncludeBudgetRow">
+              <span><strong>计入今日预算</strong></span>
               <input class="settings-switch-input" id="billIncludeBudget" type="checkbox" checked />
               <span class="settings-switch" aria-hidden="true"></span>
             </label>
-            <div class="bill-field">
-              <label>备注</label>
+            <div class="bill-field bill-note-field">
+              <label for="billNote">备注</label>
               <input type="text" id="billNote" placeholder="可选备注">
             </div>
+          </div>
+          <div class="amount-keypad" id="amountKeypad" role="group" aria-label="金额数字键盘">
+            <button type="button" class="keypad-key" data-key="1">1</button>
+            <button type="button" class="keypad-key" data-key="2">2</button>
+            <button type="button" class="keypad-key" data-key="3">3</button>
+            <button type="button" class="keypad-key" data-key="4">4</button>
+            <button type="button" class="keypad-key" data-key="5">5</button>
+            <button type="button" class="keypad-key" data-key="6">6</button>
+            <button type="button" class="keypad-key" data-key="7">7</button>
+            <button type="button" class="keypad-key" data-key="8">8</button>
+            <button type="button" class="keypad-key" data-key="9">9</button>
+            <button type="button" class="keypad-key" data-key=".">.</button>
+            <button type="button" class="keypad-key" data-key="0">0</button>
+            <button type="button" class="keypad-key keypad-key-action" data-key="backspace" aria-label="删除">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 3H7c-.6 0-1.1.3-1.4.8L1 12l4.6 8.2c.3.5.8.8 1.4.8h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3.7 12.3a1 1 0 0 1-1.4 1.4L14 13.8l-2.9 2.9a1 1 0 0 1-1.4-1.4l2.9-2.9-2.9-2.9a1 1 0 0 1 1.4-1.4l2.9 2.9 2.9-2.9a1 1 0 1 1 1.4 1.4L15.4 12l2.9 2.9z"/></svg>
+            </button>
           </div>
           <div class="accounting-sheet-actions">
             <button class="accounting-btn-primary" type="submit">保存</button>
@@ -453,13 +474,31 @@
         </div>
         <div class="bill-field">
           <label>分类预算</label>
-          <p class="field-hint" style="margin: 0 0 12px 4px;">为各支出分类单独设限，留空表示不单独限制。</p>
+          <p class="field-hint" style="margin: 0 0 12px 4px;">按需为支出分类单独设限，点击加号添加。</p>
           <div class="category-budget-list" id="categoryBudgetList"></div>
+          <button type="button" class="category-budget-add-btn" id="addCategoryBudgetBtn" aria-label="添加分类预算">
+            <span class="category-budget-add-icon" aria-hidden="true">＋</span>
+            <span>添加分类预算</span>
+          </button>
         </div>
         <div class="accounting-subpage-actions">
           <button class="accounting-btn-primary" type="submit">保存设置</button>
         </div>
       </form>
+    </div>
+
+    <!-- 选择分类预算半屏模态框 -->
+    <div class="accounting-sheet-modal" id="categoryBudgetPickerModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="accounting-sheet">
+        <div class="accounting-sheet-header">
+          <h2 class="accounting-sheet-title">选择分类</h2>
+          <button class="accounting-sheet-close" id="categoryBudgetPickerCancel" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="accounting-sheet-content">
+          <div class="category-budget-picker-list" id="categoryBudgetPickerList"></div>
+          <p class="field-hint" id="categoryBudgetPickerEmpty" hidden>所有支出分类都已添加。</p>
+        </div>
+      </div>
     </div>
 
     <!-- 资产设置半屏模态框 -->
