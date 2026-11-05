@@ -1908,12 +1908,49 @@
     renderChart(filteredBills, billsViewState.chartType);
   };
 
+  const renderCategorySummary = (chartData) => {
+    if (!billsDetailContainer) return;
+
+    let categoryListHtml = '';
+    if (chartData && chartData.length > 0) {
+      categoryListHtml = chartData.map(data => `
+        <div class="category-summary-item">
+          <div class="category-summary-header">
+            <div class="category-summary-left">
+              <span class="category-color-dot" style="background: ${data.color}"></span>
+              <span class="category-name">${data.name}</span>
+              <span class="category-percent">${data.percent}%</span>
+            </div>
+            <span class="category-amount">¥${data.amount.toFixed(2)}</span>
+          </div>
+          <div class="progress-bar-wrap category-progress-wrap">
+            <div class="progress-bar-fill category-progress-fill" style="width: ${data.percent}%; background: ${data.color}"></div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      categoryListHtml = `<div class="chart-empty">暂无分类数据</div>`;
+    }
+
+    billsDetailContainer.innerHTML = `
+      <section class="accounting-card category-summary-card">
+        <div class="card-header">
+          <h3 class="card-title">分类排行榜</h3>
+        </div>
+        <div class="category-summary-list">
+          ${categoryListHtml}
+        </div>
+      </section>
+    `;
+  };
+
   const renderChart = (bills, type) => {
     if (!billsChartContainer) return;
 
     const filteredBills = bills.filter(b => b.type === type);
     if (filteredBills.length === 0) {
       billsChartContainer.innerHTML = `<div class="chart-empty">暂无${type === 'expense' ? '支出' : '收入'}数据</div>`;
+      renderCategorySummary([]);
       return;
     }
 
@@ -1973,41 +2010,7 @@
       </div>
     `;
 
-    // Generate Category Summary List HTML
-    let categoryListHtml = '';
-    
-    if (chartData.length > 0) {
-      categoryListHtml = chartData.map(data => `
-        <div class="category-summary-item">
-          <div class="category-summary-header">
-            <div class="category-summary-left">
-              <span class="category-color-dot" style="background: ${data.color}"></span>
-              <span class="category-name">${data.name}</span>
-              <span class="category-percent">${data.percent}%</span>
-            </div>
-            <span class="category-amount">¥${data.amount.toFixed(2)}</span>
-          </div>
-          <div class="progress-bar-wrap category-progress-wrap">
-            <div class="progress-bar-fill category-progress-fill" style="width: ${data.percent}%; background: ${data.color}"></div>
-          </div>
-        </div>
-      `).join('');
-    } else {
-      categoryListHtml = `<div class="chart-empty">暂无分类数据</div>`;
-    }
-
-    if (billsDetailContainer) {
-      billsDetailContainer.innerHTML = `
-        <section class="accounting-card category-summary-card">
-          <div class="card-header">
-            <h3 class="card-title">分类排行榜</h3>
-          </div>
-          <div class="category-summary-list">
-            ${categoryListHtml}
-          </div>
-        </section>
-      `;
-    }
+    renderCategorySummary(chartData);
   };
 
   if (chartTabs) {
