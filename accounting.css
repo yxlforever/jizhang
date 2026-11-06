@@ -301,6 +301,30 @@
   font-weight: 700;
 }
 
+.assets-balance-card .balance-amount {
+  margin-bottom: 0;
+}
+
+.assets-saved-line {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.assets-saved-line span {
+  font-weight: 600;
+  color: #fff;
+}
+
+#billPayFromRow {
+  margin-top: 4px;
+}
+
+.home-stats-card .balance-stats-slider {
+  border-top: none;
+  padding-top: 0;
+}
+
 .balance-stats-slider {
   position: relative;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -400,7 +424,7 @@
 .budget-card.is-hybrid #budgetPrimaryBlock { order: 3; }
 
 .budget-card.is-hybrid #budgetCategoryList.has-items,
-.budget-card.is-hybrid #budgetPrimaryBlock,
+.budget-card.is-hybrid.hybrid-monthly-on #budgetPrimaryBlock,
 .budget-card:not(.is-hybrid) #budgetCategoryList.has-items {
   margin-top: 14px;
   padding-top: 12px;
@@ -520,9 +544,258 @@
 #budgetPeriodHint[hidden],
 #budgetHybridAmountsField[hidden],
 #budgetSingleAmountField[hidden],
+#budgetResetTimeField[hidden],
 #budgetDailyBlock[hidden],
-#billIncludeMonthlyRow[hidden] {
+#budgetPrimaryBlock[hidden],
+#billIncludeMonthlyRow[hidden],
+#billIncludeDailyRow[hidden],
+#billIncludeBudgetRow[hidden],
+#categoryBudgetField[hidden],
+#budgetGroupsField[hidden],
+#hybridDailySettings[hidden],
+#hybridMonthlySettings[hidden],
+#budgetGroupDeleteBtn[hidden] {
   display: none !important;
+}
+
+.hybrid-module-switch {
+  margin: 0 0 8px;
+  padding: 4px 0;
+}
+
+.hybrid-module-body {
+  margin: 0 0 18px;
+  padding: 12px 14px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.hybrid-module-body > label:first-of-type {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.hybrid-category-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.budget-category-item-nested {
+  margin-left: 12px;
+  opacity: 0.92;
+}
+
+.budget-category-item-nested .budget-category-item-name {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.budget-group-category-check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.budget-group-category-amount {
+  width: 88px;
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.budget-group-category-amount:disabled {
+  opacity: 0.4;
+}
+
+.budget-group-category-item {
+  gap: 8px;
+}
+
+.budget-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.budget-group-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.budget-group-row:active {
+  background: #f3f3f0;
+}
+
+.budget-group-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.budget-group-row-name {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.budget-group-row-amount {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.budget-group-row-meta {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.budget-group-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.budget-group-category-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.budget-group-category-item.is-taken {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.budget-group-category-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.budget-group-category-taken {
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.budget-group-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.budget-group-edit-actions .accounting-btn-secondary,
+.budget-group-edit-actions .accounting-btn-primary {
+  flex: 1;
+}
+
+.category-budget-hint-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.category-budget-hint-row .field-hint {
+  margin: 0 0 0 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-budget-select-all {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px;
+  padding: 0 2px;
+}
+
+.category-budget-check-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.category-budget-check {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+  background: var(--white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.category-budget-check::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--white);
+  border-bottom: 2px solid var(--white);
+  transform: rotate(-45deg) translateY(-1px) scale(0);
+  transition: transform 0.12s ease;
+}
+
+.category-budget-check-input:checked + .category-budget-check {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.category-budget-check-input:checked + .category-budget-check::after {
+  transform: rotate(-45deg) translateY(-1px) scale(1);
+}
+
+.category-budget-check-input:focus-visible + .category-budget-check {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .category-budget-list {
@@ -534,12 +807,23 @@
 .category-budget-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   background: var(--white);
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.category-budget-include {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -10px;
+  cursor: pointer;
 }
 
 .category-budget-name {
@@ -550,33 +834,94 @@
   min-width: 0;
 }
 
-.category-budget-input-wrap {
+.category-budget-dial {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+}
+
+.category-budget-dial-ring {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.category-budget-dial-track {
+  fill: none;
+  stroke: #ecece8;
+  stroke-width: 3.2;
+}
+
+.category-budget-dial-fill {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease, stroke 0.2s ease;
+}
+
+.category-budget-dial.is-empty .category-budget-dial-fill {
+  stroke: #cfcfc9;
+}
+
+.category-budget-dial-value,
+.category-budget-dial-input {
+  position: absolute;
+  inset: 10px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  padding: 0;
+}
+
+.category-budget-dial-value {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  justify-content: center;
+  cursor: pointer;
+  word-break: break-all;
 }
 
-.category-budget-input-wrap .currency {
-  font-size: 13px;
+.category-budget-dial-value:active {
+  opacity: 0.7;
+}
+
+.category-budget-dial.is-empty .category-budget-dial-value {
   color: var(--muted);
+  font-weight: 600;
 }
 
-.category-budget-row input {
-  width: 96px;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 14px;
-  background: var(--paper);
-  color: var(--ink);
-  text-align: right;
+.category-budget-dial-input {
+  display: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
-.category-budget-row input:focus {
+.category-budget-dial-input::-webkit-outer-spin-button,
+.category-budget-dial-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.category-budget-dial.is-editing .category-budget-dial-value {
+  display: none;
+}
+
+.category-budget-dial.is-editing .category-budget-dial-input {
+  display: block;
+}
+
+.category-budget-dial-input:focus {
   outline: none;
-  border-color: var(--ink);
-  background: var(--white);
 }
 
 .category-budget-remove-btn {
@@ -681,15 +1026,85 @@
   transition: width 0.3s ease;
 }
 
-.savings-card .progress-bar-fill { background: #fbbf24; }
-.debt-card .progress-bar-fill { background: #6366f1; }
+.savings-card .progress-bar-fill,
+.plan-overview-card.is-savings .progress-bar-fill { background: #fbbf24; }
+.debt-card .progress-bar-fill,
+.plan-overview-card.is-debt .progress-bar-fill { background: #6366f1; }
+
+/* 财务页：存钱 / 还钱 Tab */
+.financial-plan-tabs {
+  display: flex;
+  background: #f0f0ee;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.financial-plan-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.financial-plan-tab.active {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.financial-tab-panel[hidden] {
+  display: none;
+}
+
+.plan-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-overview-card {
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-overview-card:active {
+  transform: scale(0.985);
+}
+
+.plan-overview-card .goal-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
+}
+
+.plan-overview-card .plan-card-chevron {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
 
 /* 存钱 & 债务概览内容 */
 .empty-savings, .empty-debt {
-  padding: 10px 0;
+  padding: 28px 12px;
   text-align: center;
   color: var(--muted);
   font-size: 14px;
+  background: var(--white);
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .create-goal-btn {
@@ -810,8 +1225,14 @@
 }
 
 .bill-amount.income,
-.bill-amount.expense {
+.bill-amount.expense,
+.bill-amount.transfer {
   color: var(--ink);
+}
+
+.day-summary.transfer .day-tag {
+  background: #eef0ff;
+  color: #4338ca;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -851,6 +1272,159 @@
   display: flex;
 }
 
+#budgetPeriodEditPage,
+#planEditPage,
+#achievementsPage {
+  z-index: 121;
+}
+
+/* 计划类型选择 */
+.plan-type-section {
+  margin-bottom: 22px;
+}
+
+.plan-type-section-title {
+  margin: 0 0 10px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.plan-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-type-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 12px 14px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  background: var(--paper-light, #f8f9fa);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  min-height: 76px;
+}
+
+.plan-type-card:active {
+  background: #f0f0ee;
+  transform: scale(0.99);
+}
+
+.plan-type-card-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+}
+
+.plan-type-card-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.plan-type-card[data-kind="savings"] .plan-type-card-icon {
+  color: #b45309;
+  background: #fff8eb;
+}
+
+.plan-type-card[data-kind="debt"] .plan-type-card-icon {
+  color: #4338ca;
+  background: #eef0ff;
+}
+
+.plan-type-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-type-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.plan-type-card-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.plan-type-card-arrow {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: #c4c4be;
+  line-height: 1;
+  padding-right: 2px;
+}
+
+.plan-color-input {
+  width: 100%;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.plan-suggest-hint {
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f0f0ee;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.plan-mode-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+  background: #f0f0ee;
+  color: var(--muted);
+}
+
+.savings-info .plan-mode-tag,
+.plan-overview-card.is-savings .plan-mode-tag {
+  background: #fff8eb;
+  color: #b45309;
+}
+
+.debt-info .plan-mode-tag,
+.plan-overview-card.is-debt .plan-mode-tag {
+  background: #eef0ff;
+  color: #4338ca;
+}
+
+.plan-meta-line {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .accounting-subpage-header {
   display: flex;
   align-items: center;
@@ -886,9 +1460,113 @@
 
 .accounting-subpage-title {
   margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--ink);
+}
+
+.accounting-subpage-action {
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.accounting-subpage-action svg {
+  width: 22px;
+  height: 22px;
+}
+
+.achievements-hint {
+  margin: 0 0 16px 4px;
+}
+
+.empty-achievements {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-achievements p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.empty-achievements-sub {
+  margin-top: 8px !important;
+  font-size: 12px !important;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.achievement-item {
+  padding: 14px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.achievement-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.achievement-item .goal-name {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.achievement-done-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(37, 37, 35, 0.08);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.achievement-item .plan-meta-line {
+  margin: 0 0 8px;
+}
+
+.achievement-item-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.achievement-item.is-savings .achievement-done-badge {
+  background: rgba(251, 191, 36, 0.22);
+}
+
+.achievement-item.is-debt .achievement-done-badge {
+  background: rgba(99, 102, 241, 0.16);
 }
 
 .accounting-subpage-content {
@@ -907,6 +1585,181 @@
   font-size: 12px;
   color: var(--muted);
   line-height: 1.5;
+}
+
+/* 预算设置入口卡片 */
+.budget-type-list-hint {
+  margin: 0 0 14px 4px;
+}
+
+.budget-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.budget-type-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  background: var(--paper-light, #f8f9fa);
+  color: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  min-height: 88px;
+}
+
+.budget-type-card.is-active {
+  border-color: rgba(22, 22, 22, 0.14);
+  background: var(--white);
+  box-shadow: 0 8px 20px rgba(21, 21, 19, 0.06);
+}
+
+.budget-type-card-select {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.budget-type-card-select-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.budget-type-card-select-mark {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+  border-radius: 50%;
+  background: var(--white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-type-card-select-mark::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--white);
+  transform: scale(0);
+  transition: transform 0.12s ease;
+}
+
+.budget-type-card-select-input:checked + .budget-type-card-select-mark {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.budget-type-card-select-input:checked + .budget-type-card-select-mark::after {
+  transform: scale(1);
+}
+
+.budget-type-card-select-input:focus-visible + .budget-type-card-select-mark {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.budget-type-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 4px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.budget-type-card-body:active {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.budget-type-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.budget-type-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-type-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.budget-type-card-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.budget-type-card-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.budget-type-card[data-period="hybrid"].is-active .budget-type-card-amount {
+  font-size: 15px;
+}
+
+.budget-type-card:not(.is-active) .budget-type-card-amount {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.budget-type-card-meta {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-type-card-arrow {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 22px;
+  font-family: monospace;
+  line-height: 1;
 }
 
 /* 底部导航栏 */
@@ -1587,19 +2440,21 @@
 }
 
 .summary-card {
-  padding: 20px;
+  padding: 16px 20px;
 }
 
 .summary-grid {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
 }
 
 .summary-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .summary-item .summary-label {
@@ -1608,12 +2463,19 @@
 }
 
 .summary-item .summary-value {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-value.expense { color: var(--ink); }
 .summary-value.income { color: #10b981; }
+.summary-value.savings { color: #d97706; }
+.summary-value.debt { color: #6366f1; }
 
 /* 图形分布区域 */
 .chart-card {
@@ -1885,9 +2747,19 @@
   font-size: 14px;
 }
 
-#pwaIconStatus {
+#pwaIconStatus,
+#pwaUpdateStatus {
   min-height: 1.2em;
   margin-top: 10px;
+}
+
+.pwa-update-setting {
+  padding: 18px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pwa-update-meta {
+  min-width: 0;
 }
 
 /* 首页月份选择半屏 */

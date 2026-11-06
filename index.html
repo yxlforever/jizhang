@@ -87,12 +87,21 @@
     </header>
 
     <div class="accounting-view active" id="accountingHomeView">
-      <!-- 总余额卡片 -->
-      <section class="accounting-card balance-card">
-        <p class="card-label">当前总余额</p>
-        <h2 class="balance-amount" id="totalBalance">¥0.00</h2>
+      <!-- 收支概览（默认本月，滑动看今日） -->
+      <section class="accounting-card balance-card home-stats-card">
         <div class="balance-stats-slider">
           <div class="balance-stats-wrapper" id="balanceStatsWrapper">
+            <!-- 本月（默认） -->
+            <div class="balance-stats slide">
+              <div class="stat-item income">
+                <span class="stat-label" id="monthIncomeLabel">本月收入</span>
+                <span class="stat-value" id="monthIncome">¥0.00</span>
+              </div>
+              <div class="stat-item expense">
+                <span class="stat-label" id="monthExpenseLabel">本月支出</span>
+                <span class="stat-value" id="monthExpense">¥0.00</span>
+              </div>
+            </div>
             <!-- 今日 -->
             <div class="balance-stats slide">
               <div class="stat-item income">
@@ -104,17 +113,6 @@
                 <span class="stat-value" id="todayExpense">¥0.00</span>
               </div>
             </div>
-            <!-- 本月 -->
-            <div class="balance-stats slide">
-              <div class="stat-item income">
-                <span class="stat-label" id="monthIncomeLabel">本月收入</span>
-                <span class="stat-value" id="monthIncome">¥0.00</span>
-              </div>
-              <div class="stat-item expense">
-                <span class="stat-label" id="monthExpenseLabel">本月支出</span>
-                <span class="stat-value" id="monthExpense">¥0.00</span>
-              </div>
-            </div>
           </div>
           <div class="slider-indicators" id="balanceSliderIndicators">
             <span class="indicator active"></span>
@@ -123,7 +121,7 @@
         </div>
       </section>
 
-      <!-- 预算卡片：混合模式下顺序为今日 → 分类 → 本月 -->
+      <!-- 预算卡片：混合模式下顺序为今日 → 分组/分类 → 本月 -->
       <section class="accounting-card budget-card clickable-card" id="budgetCard">
         <div class="budget-block budget-daily-block" id="budgetDailyBlock" hidden>
           <div class="budget-main-row">
@@ -204,8 +202,12 @@
             <span class="summary-value income" id="billsIncomeTotal">¥0.00</span>
           </div>
           <div class="summary-item">
-            <span class="summary-label">结余</span>
-            <span class="summary-value" id="billsBalanceTotal">¥0.00</span>
+            <span class="summary-label">储蓄</span>
+            <span class="summary-value savings" id="billsSavingsTotal">¥0.00</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">还钱</span>
+            <span class="summary-value debt" id="billsDebtTotal">¥0.00</span>
           </div>
         </div>
       </section>
@@ -228,30 +230,23 @@
 
     <!-- 财务视图 -->
     <div class="accounting-view" id="accountingFinancialView">
-      <!-- 小狗钱钱存钱概览 -->
-      <section class="accounting-card savings-card" id="savingsOverview">
-        <div class="card-header">
-          <h3 class="card-title">小狗钱钱</h3>
+      <div class="financial-plan-tabs" role="tablist" aria-label="计划类型">
+        <button type="button" class="financial-plan-tab active" id="financialTabSavings" role="tab" aria-selected="true" aria-controls="savingsOverview" data-tab="savings">小狗钱钱</button>
+        <button type="button" class="financial-plan-tab" id="financialTabDebt" role="tab" aria-selected="false" aria-controls="debtOverview" data-tab="debt">还钱计划</button>
+      </div>
+
+      <section class="financial-tab-panel savings-panel" id="savingsOverview" role="tabpanel" aria-labelledby="financialTabSavings">
+        <div class="empty-savings" id="emptySavings">
+          <p>还没有存钱目标</p>
         </div>
-        <div id="savingsContent">
-          <div class="empty-savings" id="emptySavings">
-            <p>还没有存钱目标</p>
-          </div>
-          <div class="savings-list" id="savingsList"></div>
-        </div>
+        <div class="plan-cards-list" id="savingsList"></div>
       </section>
 
-      <!-- 债务概览 -->
-      <section class="accounting-card debt-card" id="debtOverview">
-        <div class="card-header">
-          <h3 class="card-title">还钱计划</h3>
+      <section class="financial-tab-panel debt-panel" id="debtOverview" role="tabpanel" aria-labelledby="financialTabDebt" hidden>
+        <div class="empty-debt" id="emptyDebt">
+          <p>目前没有债务</p>
         </div>
-        <div id="debtContent">
-          <div class="empty-debt" id="emptyDebt">
-            <p>目前没有债务</p>
-          </div>
-          <div class="debt-list" id="debtList"></div>
-        </div>
+        <div class="plan-cards-list" id="debtList"></div>
       </section>
     </div>
 
@@ -322,43 +317,201 @@
       </button>
     </nav>
 
-    <!-- 计划设置模态框 -->
-    <div class="accounting-sheet-modal" id="planSettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
-      <form class="accounting-sheet" id="planSettingsForm">
-        <div class="accounting-sheet-header">
-          <h2 class="accounting-sheet-title">添加计划</h2>
-          <button class="accounting-sheet-close" id="planSettingsCancel" type="button" aria-label="关闭">&times;</button>
+    <!-- 计划类型选择全屏页 -->
+    <div class="accounting-subpage" id="planSettingsPage" aria-hidden="true">
+      <header class="accounting-subpage-header">
+        <button class="accounting-subpage-back" id="planSettingsBack" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="accounting-subpage-title">添加计划</h2>
+        <button class="accounting-subpage-action" id="achievementsOpenBtn" type="button" aria-label="成就">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 21h8M12 17v4"/>
+            <path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/>
+            <path d="M17 8h1.5A2.5 2.5 0 0 0 21 5.5V4h-4M7 8H5.5A2.5 2.5 0 0 1 3 5.5V4h4"/>
+          </svg>
+        </button>
+      </header>
+      <div class="accounting-subpage-content" id="planSettingsList">
+        <p class="field-hint budget-type-list-hint">先选计划类型，再填写金额、周期等详细设置。</p>
+
+        <section class="plan-type-section">
+          <h3 class="plan-type-section-title">存钱计划</h3>
+          <div class="plan-type-list" role="list">
+            <button type="button" class="plan-type-card" data-kind="savings" data-mode="short_goal" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">短期目标</span>
+                <span class="plan-type-card-desc">有明确目标金额和截止日期，适合旅行、数码等几个月内的小目标</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="savings" data-mode="long_goal" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M6 16V8l6-4 6 4v8"/><path d="M9 16v-4h6v4"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">长期目标</span>
+                <span class="plan-type-card-desc">买房首付、教育金等大额目标，可设较长周期，按进度慢慢攒</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="savings" data-mode="fixed_plan" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3M13 14h3M8 17h8"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">固定金额计划</span>
+                <span class="plan-type-card-desc">每周或每月存固定金额，可选总目标，养成稳定存钱习惯</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="savings" data-mode="flexible" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M7 8c0-2.2 2.2-4 5-4s5 1.8 5 4-2.2 4-5 4-5 1.8-5 4 2.2 4 5 4 5-1.8 5-4"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">自由储蓄</span>
+                <span class="plan-type-card-desc">不设固定目标金额，想存多少存多少，适合长期零存整取</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="plan-type-section">
+          <h3 class="plan-type-section-title">还钱计划</h3>
+          <div class="plan-type-list" role="list">
+            <button type="button" class="plan-type-card" data-kind="debt" data-mode="fixed_repay" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">定额还款</span>
+                <span class="plan-type-card-desc">设定债务总额与每期固定还款额，按期稳定还清</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="debt" data-mode="deadline" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="12" cy="16" r="2.2"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">限期还清</span>
+                <span class="plan-type-card-desc">设定还清截止日期，系统按剩余时间估算建议每期还款</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="debt" data-mode="installment" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">分期还款</span>
+                <span class="plan-type-card-desc">按总期数拆分债务，自动计算每期应还金额</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="plan-type-card" data-kind="debt" data-mode="flexible_debt" role="listitem">
+              <span class="plan-type-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5l8 4 8-4v14"/><path d="M4 19l8-4 8 4"/></svg>
+              </span>
+              <span class="plan-type-card-main">
+                <span class="plan-type-card-title">自由还款</span>
+                <span class="plan-type-card-desc">只记债务总额，随缘还款、随时多还，适合人情债或不定期还</span>
+              </span>
+              <span class="plan-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 成就全屏页 -->
+    <div class="accounting-subpage" id="achievementsPage" aria-hidden="true">
+      <header class="accounting-subpage-header">
+        <button class="accounting-subpage-back" id="achievementsBack" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="accounting-subpage-title">成就</h2>
+      </header>
+      <div class="accounting-subpage-content" id="achievementsContent">
+        <p class="field-hint achievements-hint">有明确目标金额、且已达成的计划会出现在这里；自由储蓄、无总额的定额循环计划不会记入成就。</p>
+        <div class="empty-achievements" id="emptyAchievements">
+          <p>还没有成就</p>
+          <p class="empty-achievements-sub">完成有目标的存钱或还钱计划后，会自动移到这里</p>
         </div>
-        <div class="accounting-sheet-content">
-          <div class="add-bill-tabs">
-            <button type="button" class="bill-type-tab active" data-type="savings">小狗钱钱</button>
-            <button type="button" class="bill-type-tab" data-type="debt">还钱计划</button>
-          </div>
-          <div class="add-bill-main">
-            <div class="bill-field">
-              <label id="planNameLabel">目标名字</label>
-              <input type="text" id="planNameInput" placeholder="请输入名称" required>
-            </div>
-            <div class="bill-field">
-              <label id="planAmountLabel">目标金额 (¥)</label>
-              <input type="number" id="planAmountInput" step="0.01" placeholder="0.00" required>
-            </div>
-            <div class="bill-field">
-              <label>开始时间</label>
-              <input type="date" id="planStartDateInput" required>
-            </div>
-            <div class="bill-field">
-              <label>结束时间 (可选)</label>
-              <input type="date" id="planEndDateInput">
-            </div>
-            <div class="bill-field">
-              <label>进度条颜色</label>
-              <input type="color" id="planColorInput" value="#4CAF50" style="width: 100%; height: 40px; padding: 0; border: none; border-radius: 8px; cursor: pointer;">
-            </div>
-          </div>
-          <div class="accounting-sheet-actions">
-            <button type="submit" class="accounting-btn-primary">保存</button>
-          </div>
+        <div class="achievements-list" id="achievementsList"></div>
+      </div>
+    </div>
+
+    <!-- 计划详情编辑全屏页 -->
+    <div class="accounting-subpage" id="planEditPage" aria-hidden="true">
+      <header class="accounting-subpage-header">
+        <button class="accounting-subpage-back" id="planEditBack" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="accounting-subpage-title" id="planEditTitle">计划详情</h2>
+      </header>
+      <form class="accounting-subpage-content" id="planSettingsForm">
+        <p class="field-hint" id="planEditHint" style="margin: 0 0 16px 4px;"></p>
+
+        <div class="bill-field">
+          <label for="planNameInput" id="planNameLabel">计划名称</label>
+          <input type="text" id="planNameInput" placeholder="例如：东京旅行、信用卡账单" required maxlength="40">
+        </div>
+
+        <div class="bill-field" id="planAmountField">
+          <label for="planAmountInput" id="planAmountLabel">目标金额 (¥)</label>
+          <input type="number" id="planAmountInput" step="0.01" min="0.01" placeholder="0.00">
+        </div>
+
+        <div class="bill-field" id="planFixedAmountField" hidden>
+          <label for="planFixedAmountInput" id="planFixedAmountLabel">每期固定金额 (¥)</label>
+          <input type="number" id="planFixedAmountInput" step="0.01" min="0.01" placeholder="0.00">
+        </div>
+
+        <div class="bill-field" id="planFrequencyField" hidden>
+          <label for="planFrequencySelect">存钱/还款频率</label>
+          <select id="planFrequencySelect">
+            <option value="weekly">每周</option>
+            <option value="biweekly">每两周</option>
+            <option value="monthly" selected>每月</option>
+          </select>
+        </div>
+
+        <div class="bill-field" id="planInstallmentField" hidden>
+          <label for="planInstallmentInput">总期数</label>
+          <input type="number" id="planInstallmentInput" min="2" max="360" step="1" placeholder="例如：12">
+          <p class="field-hint">例如 12 期表示分 12 个月还清</p>
+        </div>
+
+        <div class="bill-field">
+          <label for="planStartDateInput">开始日期</label>
+          <input type="date" id="planStartDateInput" required>
+        </div>
+
+        <div class="bill-field" id="planEndDateField">
+          <label for="planEndDateInput" id="planEndDateLabel">结束日期（可选）</label>
+          <input type="date" id="planEndDateInput">
+        </div>
+
+        <div class="bill-field" id="planNoteField">
+          <label for="planNoteInput">备注（可选）</label>
+          <input type="text" id="planNoteInput" placeholder="可写用途、提醒等" maxlength="80">
+        </div>
+
+        <div class="bill-field">
+          <label for="planColorInput">进度条颜色</label>
+          <input type="color" id="planColorInput" value="#4CAF50" class="plan-color-input">
+        </div>
+
+        <p class="plan-suggest-hint" id="planSuggestHint" hidden role="status" aria-live="polite"></p>
+
+        <div class="accounting-subpage-actions">
+          <button type="submit" class="accounting-btn-primary" id="planSubmitBtn">创建计划</button>
         </div>
       </form>
     </div>
@@ -374,6 +527,7 @@
           <div class="add-bill-tabs">
             <button type="button" class="bill-type-tab active" data-type="expense">支出</button>
             <button type="button" class="bill-type-tab" data-type="income">收入</button>
+            <button type="button" class="bill-type-tab" data-type="transfer">转入</button>
           </div>
           <div class="add-bill-main">
             <div class="amount-input-wrap" id="amountInputWrap" role="button" tabindex="0" aria-label="金额输入">
@@ -382,7 +536,7 @@
             </div>
             <div class="bill-field-row">
               <div class="bill-field">
-                <label for="billCategory">分类</label>
+                <label for="billCategory" id="billCategoryLabel">分类</label>
                 <select id="billCategory" required>
                   <!-- 分类由 JS 动态加载 -->
                 </select>
@@ -392,14 +546,20 @@
                 <input type="datetime-local" id="billTime" required>
               </div>
             </div>
+            <div class="bill-field" id="billPayFromRow" hidden>
+              <label for="billPayFrom">付款来源</label>
+              <select id="billPayFrom">
+                <option value="">可花余额</option>
+              </select>
+            </div>
             <div class="bill-budget-switches" id="billIncludeBudgetRow">
-              <label class="settings-switch-row bill-budget-row">
+              <label class="settings-switch-row bill-budget-row" id="billIncludeDailyRow">
                 <span><strong id="billIncludeDailyLabel">计入今日预算</strong></span>
                 <input class="settings-switch-input" id="billIncludeBudget" type="checkbox" checked />
                 <span class="settings-switch" aria-hidden="true"></span>
               </label>
               <label class="settings-switch-row bill-budget-row" id="billIncludeMonthlyRow" hidden>
-                <span><strong>计入今月预算</strong></span>
+                <span><strong id="billIncludeMonthlyLabel">计入今月预算</strong></span>
                 <input class="settings-switch-input" id="billIncludeMonthlyBudget" type="checkbox" checked />
                 <span class="settings-switch" aria-hidden="true"></span>
               </label>
@@ -459,12 +619,22 @@
               </div>
               <input id="pwaIconInput" type="file" accept="image/*" hidden />
             </div>
+            <div class="pwa-update-setting">
+              <div class="pwa-update-meta">
+                <strong class="pwa-icon-title">检查更新</strong>
+                <p class="pwa-icon-desc">强制拉取最新页面与脚本，并清除旧缓存。PWA 卡住旧版时点此刷新。</p>
+                <div class="pwa-icon-actions">
+                  <button type="button" class="accounting-btn-primary pwa-icon-btn" id="pwaCheckUpdateBtn">检查更新</button>
+                </div>
+                <p class="field-hint" id="pwaUpdateStatus" role="status" aria-live="polite"></p>
+              </div>
+            </div>
           </div>
         </section>
       </div>
     </div>
 
-    <!-- 预算设置全屏页面 -->
+    <!-- 预算设置全屏页面（入口卡片） -->
     <div class="accounting-subpage" id="budgetSettingsPage" aria-hidden="true">
       <header class="accounting-subpage-header">
         <button class="accounting-subpage-back" id="budgetSettingsBack" type="button" aria-label="返回">
@@ -472,27 +642,119 @@
         </button>
         <h2 class="accounting-subpage-title">预算设置</h2>
       </header>
-      <form class="accounting-subpage-content" id="budgetSettingsForm">
-        <div class="bill-field">
-          <label>预算周期</label>
-          <div class="add-bill-tabs budget-period-tabs" id="budgetPeriodTabs">
-            <button type="button" class="bill-type-tab active" data-period="daily">每日</button>
-            <button type="button" class="bill-type-tab" data-period="weekly">每周</button>
-            <button type="button" class="bill-type-tab" data-period="monthly">每月</button>
-            <button type="button" class="bill-type-tab" data-period="hybrid">混合</button>
+      <div class="accounting-subpage-content" id="budgetSettingsList">
+        <p class="field-hint budget-type-list-hint">勾选启用一种预算模式，点击卡片进入详细设置。同一时间只会启用一种。</p>
+        <div class="budget-type-list" id="budgetTypeList" role="list">
+          <div class="budget-type-card" data-period="daily" role="listitem">
+            <label class="budget-type-card-select">
+              <input class="budget-type-card-select-input" type="radio" name="budgetPeriodSelect" value="daily" data-period-select="daily" aria-label="启用每日预算">
+              <span class="budget-type-card-select-mark" aria-hidden="true"></span>
+            </label>
+            <button type="button" class="budget-type-card-body">
+              <div class="budget-type-card-main">
+                <div class="budget-type-card-top">
+                  <span class="budget-type-card-title">每日预算</span>
+                  <span class="budget-type-card-badge" data-badge hidden>使用中</span>
+                </div>
+                <span class="budget-type-card-amount" data-amount>—</span>
+                <span class="budget-type-card-meta" data-meta>未启用</span>
+              </div>
+              <span class="budget-type-card-arrow" aria-hidden="true">›</span>
+            </button>
           </div>
-          <p class="field-hint" id="budgetPeriodHint" hidden style="margin: 8px 0 0 4px;">混合：记账时可分别选择是否计入今日 / 今月；分类限额按月。</p>
+          <div class="budget-type-card" data-period="weekly" role="listitem">
+            <label class="budget-type-card-select">
+              <input class="budget-type-card-select-input" type="radio" name="budgetPeriodSelect" value="weekly" data-period-select="weekly" aria-label="启用每周预算">
+              <span class="budget-type-card-select-mark" aria-hidden="true"></span>
+            </label>
+            <button type="button" class="budget-type-card-body">
+              <div class="budget-type-card-main">
+                <div class="budget-type-card-top">
+                  <span class="budget-type-card-title">每周预算</span>
+                  <span class="budget-type-card-badge" data-badge hidden>使用中</span>
+                </div>
+                <span class="budget-type-card-amount" data-amount>—</span>
+                <span class="budget-type-card-meta" data-meta>未启用</span>
+              </div>
+              <span class="budget-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="budget-type-card" data-period="monthly" role="listitem">
+            <label class="budget-type-card-select">
+              <input class="budget-type-card-select-input" type="radio" name="budgetPeriodSelect" value="monthly" data-period-select="monthly" aria-label="启用每月预算">
+              <span class="budget-type-card-select-mark" aria-hidden="true"></span>
+            </label>
+            <button type="button" class="budget-type-card-body">
+              <div class="budget-type-card-main">
+                <div class="budget-type-card-top">
+                  <span class="budget-type-card-title">每月预算</span>
+                  <span class="budget-type-card-badge" data-badge hidden>使用中</span>
+                </div>
+                <span class="budget-type-card-amount" data-amount>—</span>
+                <span class="budget-type-card-meta" data-meta>未启用</span>
+              </div>
+              <span class="budget-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="budget-type-card" data-period="hybrid" role="listitem">
+            <label class="budget-type-card-select">
+              <input class="budget-type-card-select-input" type="radio" name="budgetPeriodSelect" value="hybrid" data-period-select="hybrid" aria-label="启用混合预算">
+              <span class="budget-type-card-select-mark" aria-hidden="true"></span>
+            </label>
+            <button type="button" class="budget-type-card-body">
+              <div class="budget-type-card-main">
+                <div class="budget-type-card-top">
+                  <span class="budget-type-card-title">混合预算</span>
+                  <span class="budget-type-card-badge" data-badge hidden>使用中</span>
+                </div>
+                <span class="budget-type-card-amount" data-amount>—</span>
+                <span class="budget-type-card-meta" data-meta>未启用</span>
+              </div>
+              <span class="budget-type-card-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 预算周期编辑页 -->
+    <div class="accounting-subpage" id="budgetPeriodEditPage" aria-hidden="true">
+      <header class="accounting-subpage-header">
+        <button class="accounting-subpage-back" id="budgetPeriodEditBack" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="accounting-subpage-title" id="budgetPeriodEditTitle">每日预算</h2>
+      </header>
+      <form class="accounting-subpage-content" id="budgetSettingsForm">
+        <p class="field-hint" id="budgetPeriodHint" hidden style="margin: 0 0 16px 4px;">混合：今日、本月、分组可独立开关；计入由下方勾选分类决定，记账时不再单独勾选。</p>
         <div class="bill-field" id="budgetSingleAmountField">
           <label for="budgetAmountInput" id="budgetAmountLabel">总预算金额 (¥)</label>
           <input type="number" id="budgetAmountInput" step="0.01" min="0" placeholder="0.00">
         </div>
         <div class="bill-field" id="budgetHybridAmountsField" hidden>
-          <label for="budgetDailyAmountInput">今日预算 (¥)</label>
-          <input type="number" id="budgetDailyAmountInput" step="0.01" min="0" placeholder="0.00">
-          <label for="budgetMonthlyAmountInput" class="budget-field-label-spaced">本月预算 (¥)</label>
-          <input type="number" id="budgetMonthlyAmountInput" step="0.01" min="0" placeholder="0.00">
-          <p class="field-hint">今日与今月在记账时分别勾选是否计入。</p>
+          <label class="settings-switch-row hybrid-module-switch">
+            <span><strong>启用今日预算</strong></span>
+            <input class="settings-switch-input" id="hybridDailyEnabledSwitch" type="checkbox">
+            <span class="settings-switch" aria-hidden="true"></span>
+          </label>
+          <div id="hybridDailySettings" class="hybrid-module-body" hidden>
+            <label for="budgetDailyAmountInput">今日预算 (¥)</label>
+            <input type="number" id="budgetDailyAmountInput" step="0.01" min="0" placeholder="0.00">
+            <p class="field-hint">未勾选分类时，全部支出计入今日；勾选后仅勾选分类计入。</p>
+            <div class="hybrid-category-check-list" id="hybridDailyCategoryList"></div>
+          </div>
+
+          <label class="settings-switch-row hybrid-module-switch budget-field-label-spaced">
+            <span><strong>启用本月预算</strong></span>
+            <input class="settings-switch-input" id="hybridMonthlyEnabledSwitch" type="checkbox">
+            <span class="settings-switch" aria-hidden="true"></span>
+          </label>
+          <div id="hybridMonthlySettings" class="hybrid-module-body" hidden>
+            <label for="budgetMonthlyAmountInput">本月预算 (¥)</label>
+            <input type="number" id="budgetMonthlyAmountInput" step="0.01" min="0" placeholder="0.00">
+            <p class="field-hint">与分组独立。未勾选分类时全部计入本月总额；勾选后仅勾选分类计入。</p>
+            <div class="hybrid-category-check-list" id="hybridMonthlyCategoryList"></div>
+          </div>
         </div>
         <div class="bill-field" id="budgetResetTimeField">
           <label for="budgetResetTimeInput">新的一天开始时间</label>
@@ -510,13 +772,29 @@
           </select>
           <p class="field-hint">例如设置 07:00，则每天凌晨到早上 7 点前的花费会算在昨天的预算里。</p>
         </div>
-        <div class="bill-field">
+        <div class="bill-field" id="categoryBudgetField">
           <label>分类预算</label>
-          <p class="field-hint" id="categoryBudgetHint" style="margin: 0 0 12px 4px;">按需为支出分类单独设限，点击加号添加。</p>
+          <div class="category-budget-hint-row">
+            <p class="field-hint" id="categoryBudgetHint">未添加时全部支出计入总预算；添加后勾选的分类才计入，并可单独设限。</p>
+            <label class="category-budget-select-all" for="categoryBudgetSelectAll">
+              <input type="checkbox" id="categoryBudgetSelectAll" class="category-budget-check-input">
+              <span class="category-budget-check" aria-hidden="true"></span>
+              <span>全选</span>
+            </label>
+          </div>
           <div class="category-budget-list" id="categoryBudgetList"></div>
           <button type="button" class="category-budget-add-btn" id="addCategoryBudgetBtn" aria-label="添加分类预算">
             <span class="category-budget-add-icon" aria-hidden="true">＋</span>
             <span>添加分类预算</span>
+          </button>
+        </div>
+        <div class="bill-field" id="budgetGroupsField" hidden>
+          <label>预算分组</label>
+          <p class="field-hint" id="budgetGroupsHint">可与本月预算独立使用。自建口袋并勾选分类；可选为分类单独分配金额。</p>
+          <div class="budget-groups-list" id="budgetGroupsList"></div>
+          <button type="button" class="category-budget-add-btn" id="addBudgetGroupBtn" aria-label="添加预算分组">
+            <span class="category-budget-add-icon" aria-hidden="true">＋</span>
+            <span>添加分组</span>
           </button>
         </div>
         <div class="accounting-subpage-actions">
@@ -539,26 +817,60 @@
       </div>
     </div>
 
-    <!-- 资产设置半屏模态框 -->
-    <div class="accounting-sheet-modal" id="assetsSettingsModal" role="dialog" aria-modal="true" aria-hidden="true">
-      <form class="accounting-sheet" id="assetsSettingsForm">
+    <!-- 预算分组编辑半屏模态框 -->
+    <div class="accounting-sheet-modal" id="budgetGroupEditModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="accounting-sheet">
         <div class="accounting-sheet-header">
-          <h2 class="accounting-sheet-title">设置总资产</h2>
-          <button class="accounting-sheet-close" id="assetsSettingsCancel" type="button" aria-label="关闭">&times;</button>
+          <h2 class="accounting-sheet-title" id="budgetGroupEditTitle">添加分组</h2>
+          <button class="accounting-sheet-close" id="budgetGroupEditCancel" type="button" aria-label="关闭">&times;</button>
         </div>
         <div class="accounting-sheet-content">
-          <div class="add-bill-main">
-            <div class="bill-field">
-              <label>当前初始总资产 (¥)</label>
-              <input type="number" id="initialAssetsInput" step="0.01" placeholder="0.00" required autofocus>
-              <p style="margin: 4px 0 0 4px; font-size: 12px; color: var(--muted);">这是你的基础资产，日常记账的收支将在此基础上进行计算。</p>
-            </div>
+          <div class="bill-field">
+            <label for="budgetGroupNameInput">分组名称</label>
+            <input type="text" id="budgetGroupNameInput" maxlength="20" placeholder="如：日常、浮动">
           </div>
-          <div class="accounting-sheet-actions">
-            <button class="accounting-btn-primary" type="submit">保存设置</button>
+          <div class="bill-field">
+            <label for="budgetGroupAmountInput">分组预算 (¥)</label>
+            <input type="number" id="budgetGroupAmountInput" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="bill-field">
+            <label>包含分类</label>
+            <p class="field-hint">一个分类只能属于一个分组。勾选后可填写分类限额（留空则只共享组总额）。</p>
+            <div class="budget-group-category-list" id="budgetGroupCategoryList"></div>
+          </div>
+          <div class="accounting-sheet-actions budget-group-edit-actions">
+            <button class="accounting-btn-secondary" type="button" id="budgetGroupDeleteBtn" hidden>删除分组</button>
+            <button class="accounting-btn-primary" type="button" id="budgetGroupSaveBtn">保存分组</button>
           </div>
         </div>
-      </form>
+      </div>
+    </div>
+
+    <!-- 资产全屏页 -->
+    <div class="accounting-subpage" id="assetsSettingsPage" aria-hidden="true">
+      <header class="accounting-subpage-header">
+        <button class="accounting-subpage-back" id="assetsSettingsBack" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="accounting-subpage-title">资产</h2>
+      </header>
+      <div class="accounting-subpage-content">
+        <section class="accounting-card balance-card assets-balance-card">
+          <p class="card-label">可花余额</p>
+          <h2 class="balance-amount" id="totalBalance">¥0.00</h2>
+          <p class="assets-saved-line">已储蓄 <span id="totalSavedAmount">¥0.00</span></p>
+        </section>
+        <form id="assetsSettingsForm">
+          <div class="bill-field">
+            <label for="initialAssetsInput">初始总资产 (¥)</label>
+            <input type="number" id="initialAssetsInput" step="0.01" placeholder="0.00" required>
+            <p class="field-hint">可花余额的计算基数；收入、普通支出与转入会在此基础上增减。</p>
+          </div>
+          <div class="accounting-subpage-actions">
+            <button class="accounting-btn-primary" type="submit">保存设置</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- 导入导出 Modal -->
@@ -629,7 +941,7 @@
     }
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
+        navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {});
       });
     }
   </script>

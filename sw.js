@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jizhang-shell-v1';
+const CACHE_NAME = 'jizhang-shell-v2';
 const ICON_CACHE = 'jizhang-icons-v1';
 
 self.addEventListener('install', (event) => {
@@ -29,9 +29,35 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function clearShellCaches() {
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key !== ICON_CACHE)
+      .map((key) => caches.delete(key))
+  );
+}
+
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'SET_PWA_ICONS') return;
+  if (!data || !data.type) return;
+
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
+  if (data.type === 'CLEAR_SHELL_CACHE') {
+    event.waitUntil((async () => {
+      await clearShellCaches();
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ ok: true });
+      }
+    })());
+    return;
+  }
+
+  if (data.type !== 'SET_PWA_ICONS') return;
 
   event.waitUntil((async () => {
     const cache = await caches.open(ICON_CACHE);
